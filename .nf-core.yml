@@ -1,0 +1,17 @@
+bump_version: null
+lint: {}
+nf_core_version: 3.0.1
+org_path: null
+repository_type: pipeline
+template:
+  author: Leila Nasirzadeh
+  description: 'MetaAMR: A Nextflow pipeline for long-read metagenomics classification
+    and antimicrobial resistance detection'
+  force: true
+  is_nfcore: true
+  name: metaamr
+  org: nf-core
+  outdir: .
+  skip_features: []
+  version: 1.0.0dev
+update: null
