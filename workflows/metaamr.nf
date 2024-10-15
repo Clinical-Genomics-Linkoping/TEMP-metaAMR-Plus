@@ -5,10 +5,12 @@
 */
 include { FASTQC                 } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
+include { PORECHOP_PORECHOP      } from '../modules/nf-core/porechop/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_metaamr_pipeline'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,6 +34,21 @@ workflow METAAMR {
     )
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+
+    //
+    // MODULE: Run PORECHOPS
+    //
+    PORECHOP_PORECHOP(
+        ch_samplesheet
+    )
+    // Collect the trimmed reads and mark them as single-end
+    ch_trimmed_reads = PORECHOP_PORECHOP.out.reads
+        .map { meta, reads -> [ meta + [single_end: true], reads ] }
+
+    ch_multiqc_files = ch_multiqc_files.mix(PORECHOP_PORECHOP.out.log)
+    ch_multiqc_files = ch_multiqc_files.map { it[1] }  // Extract file path
+
+    ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
 
     //
     // Collate and save software versions
