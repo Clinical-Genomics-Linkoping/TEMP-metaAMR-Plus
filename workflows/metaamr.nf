@@ -6,6 +6,7 @@
 include { FASTQC                 } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { PORECHOP_PORECHOP      } from '../modules/nf-core/porechop/main'
+include { FILTLONG               } from '../modules/nf-core/filtlong/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -34,22 +35,55 @@ workflow METAAMR {
     )
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
-
+    /*
     //
     // MODULE: Run PORECHOPS
     //
-    PORECHOP_PORECHOP(
-        ch_samplesheet
-    )
+    if (!params.skip_trim) {
+        PORECHOP_PORECHOP(
+            ch_samplesheet
+        )
     // Collect the trimmed reads and mark them as single-end
-    ch_trimmed_reads = PORECHOP_PORECHOP.out.reads
-        .map { meta, reads -> [ meta + [single_end: true], reads ] }
+        ch_trimmed_reads = PORECHOP_PORECHOP.out.reads
+            .map { meta, reads -> 
+                def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
+                [ meta + [single_end: true], porechopped_reads ] }
 
-    ch_multiqc_files = ch_multiqc_files.mix(PORECHOP_PORECHOP.out.log)
-    ch_multiqc_files = ch_multiqc_files.map { it[1] }  // Extract file path
+        ch_multiqc_files = ch_multiqc_files.mix(PORECHOP_PORECHOP.out.log)
+        ch_multiqc_files = ch_multiqc_files.map { it[1] }  // Extract file path
 
-    ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
+        ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
 
+    // Run Filtlong on the Porechop processed reads
+        FILTLONG(
+            ch_trimmed_reads.map { meta, reads -> [meta, reads] }
+        )
+    
+    // Collect the filtered reads from Filtlong
+            ch_filtered_reads = FILTLONG.out.reads
+            ch_multiqc_files = ch_multiqc_files.mix(FILTLONG.out.log.map { it[1] })  // Ensure only log file paths
+            ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
+
+    }
+    */
+    if (!params.skip_trim) {
+        PORECHOP_PORECHOP(
+            ch_samplesheet
+        )
+        ch_clipped_reads = PORECHOP_PORECHOP.out.reads
+            .map { meta, reads -> 
+                def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
+                [ meta + [single_end: true], porechopped_reads ] }
+            
+        ch_processed_reads = FILTLONG ( ch_clipped_reads.map { meta, reads -> [ meta, [], reads ] } ).reads
+
+        ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
+        ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
+        // Collect the logs from Porechop and Filtlong and extract only the file paths
+        ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
+        ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
+        
+     }  
     //
     // Collate and save software versions
     //
