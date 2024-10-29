@@ -7,3 +7,8 @@ testing/
 testing*
 *.pyc
 nxf-tmp*
+results_test/
+*.fastq.gz
+*.bam
+*.mmi
+MetaAMR-cleanup/
