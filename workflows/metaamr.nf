@@ -13,6 +13,42 @@ include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pi
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_metaamr_pipeline'
 
 
+// Check input path parameters to see if they exist
+def checkPathParamList = [ params.input, 
+                            params.hostremoval_index,
+                            params.hostremoval_reference,
+                         
+                            
+                        ]
+for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
+
+// Check mandatory parameters
+if ( params.input ) {
+    ch_input              = file(params.input, checkIfExists: true)
+} else {
+    error("Input samplesheet not specified")
+}
+
+
+if (params.hostremoval_reference) { 
+    ch_reference = file(params.hostremoval_reference) 
+}
+if (params.hostremoval_index) { 
+    ch_reference_index = file(params.hostremoval_index) 
+} else { 
+    ch_reference_index = [] 
+}
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    IMPORT LOCAL MODULES/SUBWORKFLOWS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+//
+// SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
+//
+include {READS_HOSTREMOVAL       } from '../subworkflows/local/HOSTREMOVAL'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -23,6 +59,10 @@ workflow METAAMR {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
+    //reference = params.reference // assign reference from params
+    //index     = params.hostremoval_index // assign hostremoval index from params if any
+    
+
     main:
 
     ch_versions = Channel.empty()
@@ -35,37 +75,11 @@ workflow METAAMR {
     )
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
-    /*
-    //
-    // MODULE: Run PORECHOPS
-    //
-    if (!params.skip_trim) {
-        PORECHOP_PORECHOP(
-            ch_samplesheet
-        )
-    // Collect the trimmed reads and mark them as single-end
-        ch_trimmed_reads = PORECHOP_PORECHOP.out.reads
-            .map { meta, reads -> 
-                def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
-                [ meta + [single_end: true], porechopped_reads ] }
-
-        ch_multiqc_files = ch_multiqc_files.mix(PORECHOP_PORECHOP.out.log)
-        ch_multiqc_files = ch_multiqc_files.map { it[1] }  // Extract file path
-
-        ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
-
-    // Run Filtlong on the Porechop processed reads
-        FILTLONG(
-            ch_trimmed_reads.map { meta, reads -> [meta, reads] }
-        )
     
-    // Collect the filtered reads from Filtlong
-            ch_filtered_reads = FILTLONG.out.reads
-            ch_multiqc_files = ch_multiqc_files.mix(FILTLONG.out.log.map { it[1] })  // Ensure only log file paths
-            ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
-
-    }
-    */
+    //
+    // MODULE: Run PORECHOPS & FILTLONG
+    //
+    
     if (!params.skip_trim) {
         PORECHOP_PORECHOP(
             ch_samplesheet
@@ -83,7 +97,21 @@ workflow METAAMR {
         ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
         ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
         
-     }  
+    } 
+    
+    /*
+        SUBWORKFLOW: HOST REMOVAL
+    */
+    if ( params.perform_hostremoval ) {
+        ch_hostremoved = READS_HOSTREMOVAL(
+            ch_processed_reads, 
+            ch_reference,   // Reference channel passed here
+            ch_reference_index             // Hostremoval index passed here
+        ).reads
+        ch_versions = ch_versions.mix(READS_HOSTREMOVAL.out.versions)
+    } else {
+        ch_hostremoved = ch_processed_reads
+    }
     //
     // Collate and save software versions
     //
@@ -94,7 +122,7 @@ workflow METAAMR {
             sort: true,
             newLine: true
         ).set { ch_collated_versions }
-
+    
 
     //
     // MODULE: MultiQC
@@ -128,6 +156,9 @@ workflow METAAMR {
             sort: true
         )
     )
+    if (params.perform_hostremoval) {
+        ch_multiqc_files = ch_multiqc_files.mix(READS_HOSTREMOVAL.out.mqc.collect{it[1]}.ifEmpty([]))
+    }
 
     MULTIQC (
         ch_multiqc_files.collect(),

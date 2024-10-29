@@ -22,8 +22,8 @@ process PORECHOP_PORECHOP {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    # Ensure ID matches rest of pipeline based on meta.id rather than input file name
-    // [[ -f ${prefix}.fastq.gz ]] || ln -sf $reads ${prefix}.fastq.gz
+    #Ensure ID matches rest of pipeline based on meta.id rather than input file name
+    [[ -f ${prefix}.fastq.gz ]] || ln -sf $reads ${prefix}.fastq.gz
     porechop \\
         -i ${prefix}.fastq.gz \\
         -t $task.cpus \\
@@ -38,7 +38,8 @@ process PORECHOP_PORECHOP {
     """
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
-    """
+    /*"""
+    
     //touch ${prefix}.fastq
     //gzip ${prefix}.fastq
     //touch ${prefix}.log
@@ -47,4 +48,5 @@ process PORECHOP_PORECHOP {
         porechop: \$( porechop --version )
     END_VERSIONS
     """
+    */
 }
