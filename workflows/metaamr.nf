@@ -7,6 +7,7 @@ include { FASTQC                 } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { PORECHOP_PORECHOP      } from '../modules/nf-core/porechop/main'
 include { FILTLONG               } from '../modules/nf-core/filtlong/main'
+//include { FLYE                   } from '../modules/nf-core/flye/main' 
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -49,6 +50,7 @@ if (params.hostremoval_index) {
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
 include {READS_HOSTREMOVAL       } from '../subworkflows/local/HOSTREMOVAL'
+include {META_ASSEMBLY      } from '../subworkflows/local/ASSEMBLY'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -112,6 +114,13 @@ workflow METAAMR {
     } else {
         ch_hostremoved = ch_processed_reads
     }
+
+    /*
+        SUBWORKFLOW: ASSEMBLY
+    */
+    ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly// Use Flye’s metagenomic assembly mode
+    ch_versions = ch_versions.mix(META_ASSEMBLY.out.ch_versions)
+
     //
     // Collate and save software versions
     //

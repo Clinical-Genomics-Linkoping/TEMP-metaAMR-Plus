@@ -59,7 +59,7 @@ process SAMTOOLS_VIEW {
         fastq \\
         $args \\
         --threads ${task.cpus-1} \\
-        ${input} > ${prefix}.fastq.gz
+        ${input} | gzip  > ${prefix}.fastq.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

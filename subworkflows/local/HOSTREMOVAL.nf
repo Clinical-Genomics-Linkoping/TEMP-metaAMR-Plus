@@ -57,7 +57,7 @@ workflow READS_HOSTREMOVAL {
 
     emit:
     stats    = SAMTOOLS_STATS.out.stats     //channel: [val(meta), [reads  ] ]
-    reads    =  Channel.empty()  // channel: [ val(meta), [ reads ] ]
+    reads    = SAMTOOLS_VIEW.out.fastq       // channel for the filtered FASTQ files
     versions = ch_versions                 // channel: [ versions.yml ]
     mqc      = ch_multiqc_files
 }
