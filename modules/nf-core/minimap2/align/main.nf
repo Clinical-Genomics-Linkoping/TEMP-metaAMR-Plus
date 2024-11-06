@@ -10,7 +10,6 @@ process MINIMAP2_ALIGN {
 
     input:
     tuple val(meta), path(reads)
-    //path reference
     path reference
     val bam_format
     val cigar_paf_format

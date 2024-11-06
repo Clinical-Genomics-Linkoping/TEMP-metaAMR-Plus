@@ -1,6 +1,7 @@
 include { FLYE as FLYE_META } from '../../modules/nf-core/flye/main'
 include { QUAST } from '../../modules/nf-core/quast/main' 
 
+
 workflow META_ASSEMBLY {
 
     take:
@@ -8,7 +9,6 @@ workflow META_ASSEMBLY {
 
     main:
     ch_versions = Channel.empty()
-    ch_multiqc_files = Channel.empty()
     def mode = "--nano-hq" 
     
 
@@ -19,16 +19,15 @@ workflow META_ASSEMBLY {
     ).fasta
 
     ch_versions = ch_versions.mix(FLYE_META.out.versions)
-
-    
+   
     // Run MetaQUAST for assembly quality evaluation
     QUAST(ch_assembly)
     ch_versions = ch_versions.mix(QUAST.out.versions)
-    
+
 
 
     emit:
     ch_assembly  
-    ch_versions         
+    ch_versions      
     
 }

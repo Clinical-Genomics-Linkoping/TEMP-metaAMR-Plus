@@ -51,6 +51,7 @@ if (params.hostremoval_index) {
 //
 include {READS_HOSTREMOVAL       } from '../subworkflows/local/HOSTREMOVAL'
 include {META_ASSEMBLY      } from '../subworkflows/local/ASSEMBLY'
+include {POLISH_ASSEMBLY    } from '../subworkflows/local/POLISH_ASSEMBLY'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -118,8 +119,29 @@ workflow METAAMR {
     /*
         SUBWORKFLOW: ASSEMBLY
     */
-    ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly// Use Flye’s metagenomic assembly mode
-    ch_versions = ch_versions.mix(META_ASSEMBLY.out.ch_versions)
+    if ( params.perform_assembly ) {
+        ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly   // Use Flye’s metagenomic assembly mode
+        ch_versions = ch_versions.mix(META_ASSEMBLY.out.ch_versions)
+    } else {
+        ch_assembly = ch_hostremoved
+    }
+
+    /*
+        SUBWORKFLOW: POLISH_ASSEMBLY
+    */ 
+    if ( params.perform_polish_assembly ) {
+        POLISH_ASSEMBLY(ch_hostremoved, ch_assembly)
+        ch_polished_assembly_1 = POLISH_ASSEMBLY.out.polished_assembly_1
+        ch_polished_assembly_2 = POLISH_ASSEMBLY.out.polished_assembly_2
+    
+    // Use the second round by default, or choose based on the parameter
+        ch_final_polished_assembly = params.use_second_polish ? 
+    ch_polished_assembly_2 : ch_polished_assembly_1
+    
+        ch_versions = ch_versions.mix(POLISH_ASSEMBLY.out.versions)
+    } else {
+        ch_final_polished_assembly = ch_assembly 
+    }
 
     //
     // Collate and save software versions
