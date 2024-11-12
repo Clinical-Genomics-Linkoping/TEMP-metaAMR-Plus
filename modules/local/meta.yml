@@ -1,0 +1,13 @@
+name: download_db
+description: Downloads and prepares databases for AMR detection tools
+keywords:
+  - database
+  - download
+  - AMR
+input:
+  - tool name
+output:
+  - downloaded and prepared database
+  - versions file
+authors:
+  - @Leila Nasirzadeh

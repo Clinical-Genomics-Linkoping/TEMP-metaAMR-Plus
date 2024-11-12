@@ -7,7 +7,10 @@ include { FASTQC                 } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { PORECHOP_PORECHOP      } from '../modules/nf-core/porechop/main'
 include { FILTLONG               } from '../modules/nf-core/filtlong/main'
-//include { FLYE                   } from '../modules/nf-core/flye/main' 
+include { RESFINDER_RUN } from '../modules/nf-core/resfinder/run/main'
+include { AMRFINDERPLUS_RUN } from '../modules/nf-core/amrfinderplus/run/main' 
+include { ABRICATE_RUN } from '../modules/nf-core/abricate/run/main' 
+include { RGI_CARDANNOTATION } from '../modules/nf-core/rgi/cardannotation/main' 
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -15,20 +18,32 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_meta
 
 
 // Check input path parameters to see if they exist
+
 def checkPathParamList = [ params.input, 
-                            params.hostremoval_index,
-                            params.hostremoval_reference,
-                         
-                            
-                        ]
+                           params.hostremoval_index,
+                           params.hostremoval_reference,
+                         ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
-if ( params.input ) {
-    ch_input              = file(params.input, checkIfExists: true)
+
+if (params.input) {
+    ch_input = Channel.fromPath(params.input)
+                      .splitCsv(header:true, sep:',')
+                      .map { row -> 
+                          def meta = [id: row.sample, single_end: true]
+                          def reads = file(row.fastq_1, checkIfExists: true)
+                          return [meta, reads]
+                      }
 } else {
     error("Input samplesheet not specified")
 }
+
+// Debug: Print information about each sample
+ch_input.view { meta, reads ->
+    "Debug: Processing sample ${meta.id}, single_end: ${meta.single_end}, reads: ${reads}"
+}
+
 
 
 if (params.hostremoval_reference) { 
@@ -39,6 +54,7 @@ if (params.hostremoval_index) {
 } else { 
     ch_reference_index = [] 
 }
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,6 +68,10 @@ if (params.hostremoval_index) {
 include {READS_HOSTREMOVAL       } from '../subworkflows/local/HOSTREMOVAL'
 include {META_ASSEMBLY      } from '../subworkflows/local/ASSEMBLY'
 include {POLISH_ASSEMBLY    } from '../subworkflows/local/POLISH_ASSEMBLY'
+include { PREPARE_TOOL_DBS } from './prepare_tool_dbs'
+
+
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -62,14 +82,18 @@ workflow METAAMR {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
-    //reference = params.reference // assign reference from params
-    //index     = params.hostremoval_index // assign hostremoval index from params if any
     
 
     main:
 
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
+   
+
+    
+    // Prepare tool-specific databases
+    PREPARE_TOOL_DBS()
+    
     //
     // MODULE: Run FastQC
     //
@@ -96,7 +120,6 @@ workflow METAAMR {
 
         ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
         ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
-        // Collect the logs from Porechop and Filtlong and extract only the file paths
         ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
         ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
         
@@ -125,10 +148,12 @@ workflow METAAMR {
     } else {
         ch_assembly = ch_hostremoved
     }
-
+    
     /*
         SUBWORKFLOW: POLISH_ASSEMBLY
     */ 
+
+    
     if ( params.perform_polish_assembly ) {
         POLISH_ASSEMBLY(ch_hostremoved, ch_assembly)
         ch_polished_assembly_1 = POLISH_ASSEMBLY.out.polished_assembly_1
@@ -140,10 +165,82 @@ workflow METAAMR {
     
         ch_versions = ch_versions.mix(POLISH_ASSEMBLY.out.versions)
     } else {
-        ch_final_polished_assembly = ch_assembly 
+        ch_final_polished_assembly = ch_assembly
     }
+    
+    ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
+/*
+    // ResFinder
+    ch_assembly_for_arg.view { meta, assembly -> 
+        "Debug: Sample in ch_assembly_for_arg: ${meta.id}, Assembly: ${assembly}"
+    }
+    if (params.run_resfinder) {
+        log.info "Running ResFinder"
 
-    //
+        // Debug: Print input being sent to RESFINDER_RUN
+        ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }.view { 
+            "Debug: Input for ResFinder: Sample ${it[0].id}, FASTQ: ${it[1]}, FASTA: ${it[2]}"
+        }  
+    
+        RESFINDER_RUN (
+            ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] },
+            PREPARE_TOOL_DBS.out.resfinder_db,
+            params.resfinder_args ?: ''
+        )
+        ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+        
+        
+    }*/
+    
+    if (params.run_resfinder) {
+        log.info "Running ResFinder"
+
+        ch_resfinder_input = ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }
+    
+        //ch_resfinder_input.view { meta, fastq, fasta ->
+           // "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}"
+        //}
+        ch_resfinder_input.combine(PREPARE_TOOL_DBS.out.resfinder_db).view { meta, fastq, fasta, db ->
+            "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}, DB: ${db}"
+        }
+
+
+        RESFINDER_RUN (
+            ch_resfinder_input,
+            PREPARE_TOOL_DBS.out.resfinder_db,
+            params.resfinder_args ?: ''
+        )
+        ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+
+        RESFINDER_RUN.out.all_outputs.view { meta, files -> 
+            "ResFinder outputs for ${meta.id}: ${files.collect { it.getName() }.join(', ')}"
+        }
+    }
+    
+
+    if (params.run_abricate) {
+        log.info "Running Abricate"
+
+        ch_abricate_input = ch_final_polished_assembly
+        //ch_abricate_input.view { meta, assembly ->
+          //  "Debug: Abricate input - Sample: ${meta.id}, Assembly: ${assembly}"
+        //}
+        ch_abricate_input.combine(PREPARE_TOOL_DBS.out.abricate_db).view { meta, assembly, db ->
+            "Debug: Abricate input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
+        }
+        ABRICATE_RUN(
+            ch_abricate_input,
+            PREPARE_TOOL_DBS.out.abricate_db
+        )
+        
+        ch_versions = ch_versions.mix(ABRICATE_RUN.out.versions)
+
+        ABRICATE_RUN.out.report.view { meta, report -> 
+            "Abricate outputs for ${meta.id}: ${report.getName()}"
+        }
+    
+    }
+    
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)
@@ -201,7 +298,7 @@ workflow METAAMR {
     )
 
     emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    versions       = ch_versions                 // channel: [ path(versions.yml) ]
+    versions       = ch_versions.ifEmpty(null)               // channel: [ path(versions.yml) ]
 
 }
 
