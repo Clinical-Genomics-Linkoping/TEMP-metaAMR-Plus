@@ -1,4 +1,5 @@
 
+
 process RESFINDER_RUN {
     tag "$meta.id"
     label 'process_medium'

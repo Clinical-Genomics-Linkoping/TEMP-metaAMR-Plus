@@ -9,8 +9,10 @@ include { PORECHOP_PORECHOP      } from '../modules/nf-core/porechop/main'
 include { FILTLONG               } from '../modules/nf-core/filtlong/main'
 include { RESFINDER_RUN } from '../modules/nf-core/resfinder/run/main'
 include { AMRFINDERPLUS_RUN } from '../modules/nf-core/amrfinderplus/run/main' 
+include { AMRFINDERPLUS_UPDATE } from '../modules/nf-core/amrfinderplus/update/main' 
 include { ABRICATE_RUN } from '../modules/nf-core/abricate/run/main' 
 include { RGI_CARDANNOTATION } from '../modules/nf-core/rgi/cardannotation/main' 
+include { RGI_MAIN } from '../modules/nf-core/rgi/main/main' 
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -169,37 +171,13 @@ workflow METAAMR {
     }
     
     ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
-/*
-    // ResFinder
-    ch_assembly_for_arg.view { meta, assembly -> 
-        "Debug: Sample in ch_assembly_for_arg: ${meta.id}, Assembly: ${assembly}"
-    }
-    if (params.run_resfinder) {
-        log.info "Running ResFinder"
 
-        // Debug: Print input being sent to RESFINDER_RUN
-        ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }.view { 
-            "Debug: Input for ResFinder: Sample ${it[0].id}, FASTQ: ${it[1]}, FASTA: ${it[2]}"
-        }  
-    
-        RESFINDER_RUN (
-            ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] },
-            PREPARE_TOOL_DBS.out.resfinder_db,
-            params.resfinder_args ?: ''
-        )
-        ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-        
-        
-    }*/
     
     if (params.run_resfinder) {
         log.info "Running ResFinder"
 
         ch_resfinder_input = ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }
     
-        //ch_resfinder_input.view { meta, fastq, fasta ->
-           // "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}"
-        //}
         ch_resfinder_input.combine(PREPARE_TOOL_DBS.out.resfinder_db).view { meta, fastq, fasta, db ->
             "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}, DB: ${db}"
         }
@@ -216,15 +194,10 @@ workflow METAAMR {
             "ResFinder outputs for ${meta.id}: ${files.collect { it.getName() }.join(', ')}"
         }
     }
-    
-
     if (params.run_abricate) {
         log.info "Running Abricate"
 
         ch_abricate_input = ch_final_polished_assembly
-        //ch_abricate_input.view { meta, assembly ->
-          //  "Debug: Abricate input - Sample: ${meta.id}, Assembly: ${assembly}"
-        //}
         ch_abricate_input.combine(PREPARE_TOOL_DBS.out.abricate_db).view { meta, assembly, db ->
             "Debug: Abricate input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
         }
@@ -234,13 +207,33 @@ workflow METAAMR {
         )
         
         ch_versions = ch_versions.mix(ABRICATE_RUN.out.versions)
-
         ABRICATE_RUN.out.report.view { meta, report -> 
             "Abricate outputs for ${meta.id}: ${report.getName()}"
         }
     
     }
     
+    if (params.run_amrfinderplus) {
+        log.info "Running AMRFinderPlus"
+
+        ch_amrfinderplus_input = ch_final_polished_assembly
+        ch_amrfinderplus_input.combine(PREPARE_TOOL_DBS.out.amrfinderplus_db).view { meta, assembly, db ->
+            "Debug: AMRFinderPlus input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
+        }
+
+        AMRFINDERPLUS_RUN(
+            ch_amrfinderplus_input,
+            PREPARE_TOOL_DBS.out.amrfinderplus_db,
+            
+        )
+
+        ch_versions = ch_versions.mix(AMRFINDERPLUS_RUN.out.versions)
+        AMRFINDERPLUS_RUN.out.report.view { meta, report -> 
+            "AMRFinderPlus outputs for ${meta.id}: ${report.getName()}"
+        }
+        ch_multiqc_files = ch_multiqc_files.mix(AMRFINDERPLUS_RUN.out.report.collect{it[1]}.ifEmpty([]))
+    }
+
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)

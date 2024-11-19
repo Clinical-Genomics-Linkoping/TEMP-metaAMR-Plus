@@ -2,6 +2,7 @@ include { DOWNLOAD_DB as RESFINDER_DB_DOWNLOAD } from '../modules/local/download
 include { DOWNLOAD_DB as RGI_DB_DOWNLOAD } from '../modules/local/download_db'
 include { DOWNLOAD_DB as AMRFINDERPLUS_DB_DOWNLOAD } from '../modules/local/download_db'
 include { DOWNLOAD_DB as ABRICATE_DB_DOWNLOAD } from '../modules/local/download_db'
+include { AMRFINDERPLUS_UPDATE } from '../modules/nf-core/amrfinderplus/update/main'
 
 def prepare_db(tool, db_path, download_flag, default_db = null) {
     if (db_path) {
@@ -19,13 +20,14 @@ def prepare_db(tool, db_path, download_flag, default_db = null) {
 workflow PREPARE_TOOL_DBS {
     main:
     ch_resfinder_db = params.download_resfinder_db ? Channel.of('resfinder') : Channel.empty()
-    //ch_resfinder_db = prepare_db('resfinder', params.resfinder_db, params.download_resfinder_db)
     ch_rgi_db = prepare_db('rgi', params.rgi_db, params.download_rgi_db)
     ch_amrfinderplus_db = prepare_db('amrfinderplus', params.amrfinderplus_db, params.download_amrfinderplus_db)
-    //ch_abricate_db = prepare_db('abricate', params.abricate_db_path, params.download_abricate_db, params.abricate_db)
-    ch_abricate_db = params.abricate_db ? Channel.of(params.abricate_db) : Channel.empty()
-    // Process ResFinder DB
     
+    ch_abricate_db = params.abricate_db ? Channel.of(params.abricate_db) : Channel.empty()
+    
+    
+    
+    // Process ResFinder DB
     ch_resfinder_db_downloaded = ch_resfinder_db.branch {
         to_download: it == 'resfinder'
         ready: true
@@ -46,8 +48,13 @@ workflow PREPARE_TOOL_DBS {
         to_download: it == 'amrfinderplus'
         ready: true
     }
-    ch_amrfinderplus_db_downloaded.to_download | AMRFINDERPLUS_DB_DOWNLOAD
-    ch_amrfinderplus_db_final = ch_amrfinderplus_db_downloaded.ready.mix(AMRFINDERPLUS_DB_DOWNLOAD.out.db)
+    // Run AMRFINDERPLUS_UPDATE only if we need to download the database
+    if (params.download_amrfinderplus_db) {
+        AMRFINDERPLUS_UPDATE()
+        ch_amrfinderplus_db_final = AMRFINDERPLUS_UPDATE.out.db
+    } else {
+        ch_amrfinderplus_db_final = ch_amrfinderplus_db_downloaded.ready
+    }
 
 
     // Process Abricate DB
