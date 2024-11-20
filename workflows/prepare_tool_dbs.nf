@@ -3,6 +3,7 @@ include { DOWNLOAD_DB as RGI_DB_DOWNLOAD } from '../modules/local/download_db'
 include { DOWNLOAD_DB as AMRFINDERPLUS_DB_DOWNLOAD } from '../modules/local/download_db'
 include { DOWNLOAD_DB as ABRICATE_DB_DOWNLOAD } from '../modules/local/download_db'
 include { AMRFINDERPLUS_UPDATE } from '../modules/nf-core/amrfinderplus/update/main'
+include { GUNZIP } from '../modules/nf-core/gunzip/main'
 
 def prepare_db(tool, db_path, download_flag, default_db = null) {
     if (db_path) {
@@ -36,12 +37,9 @@ workflow PREPARE_TOOL_DBS {
     ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(RESFINDER_DB_DOWNLOAD.out.db).first()
 
     // Process RGI DB
-    ch_rgi_db_downloaded = ch_rgi_db.branch {
-        to_download: it == 'rgi'
-        ready: true
-    }
-    ch_rgi_db_downloaded.to_download | RGI_DB_DOWNLOAD
-    ch_rgi_db_final = ch_rgi_db_downloaded.ready.mix(RGI_DB_DOWNLOAD.out.db)
+    RGI_DB_DOWNLOAD(ch_rgi_db)
+    ch_rgi_db_final = RGI_DB_DOWNLOAD.out.db
+
 
     // Process AMRFinderPlus DB
     ch_amrfinderplus_db_downloaded = ch_amrfinderplus_db.branch {
@@ -68,7 +66,7 @@ workflow PREPARE_TOOL_DBS {
    
     emit:
     resfinder_db     = ch_resfinder_db_final
-    rgi_db           = ch_rgi_db_final
+    rgi_db = ch_rgi_db_final
     amrfinderplus_db = ch_amrfinderplus_db_final
     abricate_db      = ch_abricate_db_final
 }

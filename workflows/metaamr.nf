@@ -71,7 +71,7 @@ include {READS_HOSTREMOVAL       } from '../subworkflows/local/HOSTREMOVAL'
 include {META_ASSEMBLY      } from '../subworkflows/local/ASSEMBLY'
 include {POLISH_ASSEMBLY    } from '../subworkflows/local/POLISH_ASSEMBLY'
 include { PREPARE_TOOL_DBS } from './prepare_tool_dbs'
-
+include { EXTRACT_RGI_DB } from   '../modules/local/EXTRACT_RGI_DB'
 
 
 /*
@@ -96,6 +96,16 @@ workflow METAAMR {
     // Prepare tool-specific databases
     PREPARE_TOOL_DBS()
     
+
+    PREPARE_TOOL_DBS.out.rgi_db.view { "Debug: RGI DB from PREPARE_TOOL_DBS: $it" }
+    def ch_rgi_db_extracted = PREPARE_TOOL_DBS.out.rgi_db.branch {
+        compressed: it.toString().endsWith('.tar.gz')
+        ready: true
+    }
+  
+    EXTRACT_RGI_DB(ch_rgi_db_extracted.compressed)
+    def ch_rgi_db_final = ch_rgi_db_extracted.ready.mix(EXTRACT_RGI_DB.out.rgi_db)
+    ch_rgi_db_final.view { "Debug: Final RGI DB: $it" }
     //
     // MODULE: Run FastQC
     //
@@ -234,6 +244,27 @@ workflow METAAMR {
         ch_multiqc_files = ch_multiqc_files.mix(AMRFINDERPLUS_RUN.out.report.collect{it[1]}.ifEmpty([]))
     }
 
+
+    if (params.run_rgi) {
+        log.info "Running RGI"
+
+        ch_rgi_input = ch_final_polished_assembly
+        ch_rgi_input.combine(ch_rgi_db_final).view { meta, assembly, db ->
+            "Debug: RGI input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
+        }
+
+        RGI_MAIN(
+            ch_rgi_input,
+            ch_rgi_db_final,
+            []  // Wildcard input, set to empty if not using
+        )
+
+        ch_versions = ch_versions.mix(RGI_MAIN.out.versions)
+        RGI_MAIN.out.tsv.view { meta, tsv -> 
+            "RGI outputs for ${meta.id}: ${tsv.getName()}"
+        }
+        ch_multiqc_files = ch_multiqc_files.mix(RGI_MAIN.out.tsv.collect{it[1]}.ifEmpty([]))
+    }
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)
