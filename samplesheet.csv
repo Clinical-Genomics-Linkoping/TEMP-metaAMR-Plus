@@ -1,2 +1,5 @@
 sample,fastq_1
+kpn,/mnt/projects/CGLi_Projects/Jyotirmoy/WP3.2/Test_data/Kpneumoniae.fastq.gz
 Sau,/mnt/projects/CGLi_Projects/Jyotirmoy/WP3.2/Test_data/Saureus.fastq.gz
+Eco,/mnt/projects/CGLi_Projects/Jyotirmoy/WP3.2/Test_data/Ecoli.fastq.gz
+
