@@ -72,6 +72,7 @@ include {META_ASSEMBLY      } from '../subworkflows/local/ASSEMBLY'
 include {POLISH_ASSEMBLY    } from '../subworkflows/local/POLISH_ASSEMBLY'
 include { PREPARE_TOOL_DBS } from './prepare_tool_dbs'
 include { EXTRACT_RGI_DB } from   '../modules/local/EXTRACT_RGI_DB'
+include { HAMRONIZATION } from '../subworkflows/local/HAMRONIZATION'
 
 
 /*
@@ -186,8 +187,8 @@ workflow METAAMR {
     if (params.run_resfinder) {
         log.info "Running ResFinder"
 
-        ch_resfinder_input = ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }
-    
+        //ch_resfinder_input = ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }
+        ch_resfinder_input = ch_final_polished_assembly
         ch_resfinder_input.combine(PREPARE_TOOL_DBS.out.resfinder_db).view { meta, fastq, fasta, db ->
             "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}, DB: ${db}"
         }
@@ -244,28 +245,7 @@ workflow METAAMR {
         ch_multiqc_files = ch_multiqc_files.mix(AMRFINDERPLUS_RUN.out.report.collect{it[1]}.ifEmpty([]))
     }
 
-/*
-    if (params.run_rgi) {
-        log.info "Running RGI"
 
-        ch_rgi_input = ch_final_polished_assembly
-        ch_rgi_input.combine(ch_rgi_db_final).view { meta, assembly, db ->
-            "Debug: RGI input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
-        }
-
-        RGI_MAIN(
-            ch_rgi_input,
-            ch_rgi_db_final,
-            []  // Wildcard input, set to empty if not using
-        )
-
-        ch_versions = ch_versions.mix(RGI_MAIN.out.versions)
-        RGI_MAIN.out.tsv.view { meta, tsv -> 
-            "RGI outputs for ${meta.id}: ${tsv.getName()}"
-        }
-        ch_multiqc_files = ch_multiqc_files.mix(RGI_MAIN.out.tsv.collect{it[1]}.ifEmpty([]))
-    }
-    */
     if (params.run_rgi) {
         log.info "Running RGI"
 
@@ -299,6 +279,25 @@ workflow METAAMR {
                 .ifEmpty([])
         )
     }    
+    
+     // Collect results from AMR tools
+    ch_abricate_results = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()
+    ch_amrfinderplus_results = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()
+    ch_rgi_results = params.run_rgi ? RGI_MAIN.out.tsv : Channel.empty()
+
+    // Run HAMRONIZATION
+    if (params.run_hamronization) {
+        HAMRONIZATION (
+            ch_abricate_results,
+            ch_amrfinderplus_results,
+            ch_rgi_results
+        )
+        ch_versions = ch_versions.mix(HAMRONIZATION.out.versions.ifEmpty([]))
+        ch_multiqc_files = ch_multiqc_files.mix(HAMRONIZATION.out.summary.collect{it[1]}.ifEmpty([]))
+    }
+
+    
+    
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)

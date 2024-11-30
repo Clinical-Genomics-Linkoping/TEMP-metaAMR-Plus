@@ -2,7 +2,6 @@ process DOWNLOAD_DB {
     tag "$tool"
     label 'process_high'
     label 'error_retry'
-    //publishDir "${params.outdir}/databases/${tool}", mode: 'copy'
     publishDir "${params.outdir}/databases", mode: 'copy', saveAs: { filename -> "${tool}/$filename" }
 
     input:
@@ -15,6 +14,15 @@ process DOWNLOAD_DB {
 
     script:
     """
+    set -x  # Enable debug mode
+
+    # Check tool availability
+    which git || echo "Git not found"
+    which wget || echo "Wget not found"
+    which amrfinder || echo "AMRFinder not found"
+    which abricate || echo "Abricate not found"
+    which ${tool} || echo "${tool} not found"
+
     mkdir -p ${tool}_db
     case $tool in
         resfinder)
@@ -23,7 +31,6 @@ process DOWNLOAD_DB {
         rgi)
             wget https://card.mcmaster.ca/latest/data -O ${tool}_db.tar.gz
             tar -xvf ${tool}_db.tar.gz -C ${tool}_db
-            
             ;;
         amrfinderplus)
             amrfinder_update --force_update --database ${tool}_db
@@ -37,6 +44,7 @@ process DOWNLOAD_DB {
             exit 1
             ;;
     esac
+
     # Get version
     if [ "$tool" = "rgi" ]; then
         TOOL_VERSION=\$(docker run --rm quay.io/biocontainers/rgi:6.0.3--pyha8f3691_1 rgi main --version 2>&1 | sed 's/^.*v//')
