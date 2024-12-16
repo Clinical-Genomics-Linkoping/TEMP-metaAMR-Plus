@@ -1,3 +1,4 @@
+
 process ABRICATE_RUN {
     tag "$meta.id"
     label 'process_medium'
@@ -9,7 +10,7 @@ process ABRICATE_RUN {
 
     input:
     tuple val(meta), path(assembly)
-    val db_name_or_path
+    val db_name
     
     output:
     tuple val(meta), path("${meta.id}_abricate.tsv"), emit: report
@@ -21,18 +22,15 @@ process ABRICATE_RUN {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    //def datadir = databasedir ? "--datadir ${databasedir}" : ''
-    //def db_option = db_name_or_path.contains('/') ? "--datadir ${db_name_or_path}" : "--db ${db_name_or_path}"
-    def db_option = db_name_or_path.toString().contains('/') ? "--datadir ${db_name_or_path}" : "--db ${db_name_or_path}"
+    
     """
-    echo "Debug: Running Abricate for sample ${meta.id}"
-    echo "Debug: Assembly file: ${assembly}"
-    echo "Debug: Database option: ${db_option}"
-
-    abricate $args $db_option $assembly > ${meta.id}_abricate.tsv
-    echo "Debug: Abricate completed for sample ${meta.id}"
-    echo "Debug: Abricate output:"
-    cat ${meta.id}_abricate.tsv | head -n 5
+    
+    abricate \\
+        $args \\
+        --db ${db_name} \\
+        --minid ${params.abricate_minid} \\
+        --mincov ${params.abricate_mincov} \\
+        ${assembly} > ${meta.id}_abricate.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

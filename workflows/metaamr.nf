@@ -13,10 +13,12 @@ include { AMRFINDERPLUS_UPDATE } from '../modules/nf-core/amrfinderplus/update/m
 include { ABRICATE_RUN } from '../modules/nf-core/abricate/run/main' 
 include { RGI_CARDANNOTATION } from '../modules/nf-core/rgi/cardannotation/main' 
 include { RGI_MAIN } from '../modules/nf-core/rgi/main/main' 
+include { PLASMIDFINDER } from '../modules/nf-core/plasmidfinder/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_metaamr_pipeline'
+
 
 
 // Check input path parameters to see if they exist
@@ -73,6 +75,7 @@ include {POLISH_ASSEMBLY    } from '../subworkflows/local/POLISH_ASSEMBLY'
 include { PREPARE_TOOL_DBS } from './prepare_tool_dbs'
 include { EXTRACT_RGI_DB } from   '../modules/local/EXTRACT_RGI_DB'
 include { HAMRONIZATION } from '../subworkflows/local/HAMRONIZATION'
+include { VALIDATE_FASTA } from '../modules/local/validate_fasta'
 
 
 /*
@@ -209,19 +212,16 @@ workflow METAAMR {
         log.info "Running Abricate"
 
         ch_abricate_input = ch_final_polished_assembly
-        ch_abricate_input.combine(PREPARE_TOOL_DBS.out.abricate_db).view { meta, assembly, db ->
-            "Debug: Abricate input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
-        }
+        
         ABRICATE_RUN(
             ch_abricate_input,
-            PREPARE_TOOL_DBS.out.abricate_db
+            params.arg_abricate_db
         )
-        
+    
         ch_versions = ch_versions.mix(ABRICATE_RUN.out.versions)
         ABRICATE_RUN.out.report.view { meta, report -> 
             "Abricate outputs for ${meta.id}: ${report.getName()}"
         }
-    
     }
     
     if (params.run_amrfinderplus) {
@@ -279,7 +279,39 @@ workflow METAAMR {
                 .ifEmpty([])
         )
     }    
+    VALIDATE_FASTA(ch_final_polished_assembly)
+    ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
+
+    if (params.run_plasmidfinder) {
+        log.info "Running PlasmidFinder"
+
+   // Combine validated assemblies with PlasmidFinder database
+        ch_plasmidfinder_input = VALIDATE_FASTA.out.validated_fasta.combine(PREPARE_TOOL_DBS.out.plasmidfinder_db)
+
+        // Run PlasmidFinder
+        PLASMIDFINDER (
+            VALIDATE_FASTA.out.validated_fasta,
+            PREPARE_TOOL_DBS.out.plasmidfinder_db
+        )
+
+        // Collect versions
+        ch_versions = ch_versions.mix(PLASMIDFINDER.out.versions)
+
+        // Add PlasmidFinder results to MultiQC if required
+        ch_multiqc_files = ch_multiqc_files.mix(
+            PLASMIDFINDER.out.tsv.collect { it[1] }.ifEmpty([])
+        )
+        
     
+
+    // Debug MultiQC input files after adding PlasmidFinder results
+        ch_multiqc_files.view { "Debug: MultiQC input files after adding PlasmidFinder - $it" }
+
+    }
+
+    
+
+        
      // Collect results from AMR tools
     ch_abricate_results = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()
     ch_amrfinderplus_results = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()

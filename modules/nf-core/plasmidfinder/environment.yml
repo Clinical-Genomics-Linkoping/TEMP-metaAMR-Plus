@@ -1,0 +1,7 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::plasmidfinder=2.1.6=py310hdfd78af_1
+  - bioconda::blast=2.12.0
+  - bioconda::kma=1.4.0
