@@ -76,7 +76,8 @@ include { PREPARE_TOOL_DBS } from './prepare_tool_dbs'
 include { EXTRACT_RGI_DB } from   '../modules/local/EXTRACT_RGI_DB'
 include { HAMRONIZATION } from '../subworkflows/local/HAMRONIZATION'
 include { VALIDATE_FASTA } from '../modules/local/validate_fasta'
-
+include { PLASCLASS } from '../modules/local/plasclass'
+include { PLASCLASS_POSTPROCESS } from '../modules/local/plasclass_postprocess.nf'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -301,14 +302,50 @@ workflow METAAMR {
         ch_multiqc_files = ch_multiqc_files.mix(
             PLASMIDFINDER.out.tsv.collect { it[1] }.ifEmpty([])
         )
+    }
         
+    // Run plasclass
+   /* if (params.run_plasclass) {
+        log.info "Running PlasClass"
+
+        ch_plasclass_input = ch_final_polished_assembly
+
+        ch_plasclass_input.view { meta, assembly ->
+            "Debug: PlasClass input - Sample: ${meta.id}, Assembly: ${assembly}"
+        }
+
+        PLASCLASS(VALIDATE_FASTA.out.validated_fasta)
+
+        ch_versions = ch_versions.mix(PLASCLASS.out.versions)
+        PLASCLASS.out.report.view { meta, report -> 
+                "PlasClass outputs for ${meta.id}: ${report.getName()}"
+            }
+        ch_multiqc_files = ch_multiqc_files.mix(PLASCLASS.out.report.collect{it[1]}.ifEmpty([]))
     
+
 
     // Debug MultiQC input files after adding PlasmidFinder results
         ch_multiqc_files.view { "Debug: MultiQC input files after adding PlasmidFinder - $it" }
 
     }
+*/
+    // Run PlasClass
+    if (params.run_plasclass) {
+        log.info "Running PlasClass"
 
+    // Step 1: Run PlasClass
+        PLASCLASS(VALIDATE_FASTA.out.validated_fasta)
+
+    // Step 2: Post-process PlasClass outputs
+        PLASCLASS_POSTPROCESS(PLASCLASS.out.report)
+
+    // Combine versions for tracking
+        ch_versions = ch_versions.mix(PLASCLASS.out.versions)
+        ch_versions = ch_versions.mix(PLASCLASS_POSTPROCESS.out.versions)
+
+    // Step 3: Collect results for MultiQC (optional)
+        ch_multiqc_files = ch_multiqc_files.mix(PLASCLASS_POSTPROCESS.out.classified.collect { it[1] }.ifEmpty([]))
+    }
     
 
         
@@ -317,8 +354,11 @@ workflow METAAMR {
     ch_amrfinderplus_results = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()
     ch_rgi_results = params.run_rgi ? RGI_MAIN.out.tsv : Channel.empty()
 
-    // Run HAMRONIZATION
-    if (params.run_hamronization) {
+
+     // Count the number of active AMR tools
+    def active_amr_tools = [params.run_abricate, params.run_amrfinderplus, params.run_rgi].count { it }
+    // Run HAMRONIZATION only if more than one AMR tool is active and run_hamronization is true
+    if (params.run_hamronization && active_amr_tools > 1) {
         HAMRONIZATION (
             ch_abricate_results,
             ch_amrfinderplus_results,
@@ -326,6 +366,8 @@ workflow METAAMR {
         )
         ch_versions = ch_versions.mix(HAMRONIZATION.out.versions.ifEmpty([]))
         ch_multiqc_files = ch_multiqc_files.mix(HAMRONIZATION.out.summary.collect{it[1]}.ifEmpty([]))
+    } else {
+        log.info "Skipping HAMRONIZATION: Either fewer than two AMR tools are active or run_hamronization is set to false."
     }
 
     
