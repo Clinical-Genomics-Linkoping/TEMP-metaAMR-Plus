@@ -50,6 +50,27 @@ ch_input.view { meta, reads ->
 
 
 
+// Check if databases file is provided and create a channel
+ch_databases = params.databases ? Channel.fromPath(params.databases)
+    .splitCsv(header:true, sep:',')
+    .map { row -> 
+        def meta = [:]
+        meta.tool = row.tool
+        meta.db_name = row.db_name
+        meta.db_params = row.db_params
+        [ meta, file(row.db_path) ]
+    } : Channel.empty()
+
+// Log information about databases
+if (params.databases) {
+    log.info "Using provided database file: ${params.databases}"
+} else {
+    log.info "No database file provided. Tools will use default databases or prepare them as needed."
+}
+
+
+
+
 if (params.hostremoval_reference) { 
     ch_reference = file(params.hostremoval_reference) 
 }
@@ -78,7 +99,7 @@ include { HAMRONIZATION } from '../subworkflows/local/HAMRONIZATION'
 include { VALIDATE_FASTA } from '../modules/local/validate_fasta'
 include { PLASCLASS } from '../modules/local/plasclass'
 include { PLASCLASS_POSTPROCESS } from '../modules/local/plasclass_postprocess.nf'
-
+include { PROFILING } from '../subworkflows/local/PROFILING'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -191,20 +212,24 @@ workflow METAAMR {
     if (params.run_resfinder) {
         log.info "Running ResFinder"
 
-        //ch_resfinder_input = ch_assembly_for_arg.map { meta, assembly -> [ meta, [], assembly ] }
+    // Prepare input channel for all cases
         ch_resfinder_input = ch_final_polished_assembly
-        ch_resfinder_input.combine(PREPARE_TOOL_DBS.out.resfinder_db).view { meta, fastq, fasta, db ->
-            "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}, DB: ${db}"
-        }
+            .map { meta, fasta -> [meta, [], fasta] } // For polished assemblies (no FASTQ)
 
+        ch_resfinder_input
+            .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+            .map { meta, fastq, fasta, db -> [ meta, fastq, fasta, db ] }
+            .view { meta, fastq, fasta, db -> 
+                "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}, DB: ${db}"
+            }
+            .set { ch_resfinder_combined_input }
 
-        RESFINDER_RUN (
-            ch_resfinder_input,
-            PREPARE_TOOL_DBS.out.resfinder_db,
-            params.resfinder_args ?: ''
+        RESFINDER_RUN(
+            ch_resfinder_combined_input
         )
+    
+    // Mix versions and outputs into global channels
         ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-
         RESFINDER_RUN.out.all_outputs.view { meta, files -> 
             "ResFinder outputs for ${meta.id}: ${files.collect { it.getName() }.join(', ')}"
         }
@@ -255,15 +280,15 @@ workflow METAAMR {
             .view { meta, assembly -> "Debug: Sample ready for RGI: ${meta.id}" }
 
         ch_rgi_input
-           .combine(ch_rgi_db_final)
-           .view { meta, assembly, db -> 
+            .combine(ch_rgi_db_final)
+            .map { meta, assembly, db -> [ meta, assembly, db ] }  // Ensure correct structure
+            .view { meta, assembly, db -> 
                 "Debug: Combined input for RGI - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
             }
             .set { ch_rgi_combined_input }
 
         RGI_MAIN(
             ch_rgi_combined_input,
-            ch_rgi_db_final,
             []  // Wildcard input, set to empty if not using
         )
 
@@ -369,9 +394,33 @@ workflow METAAMR {
     } else {
         log.info "Skipping HAMRONIZATION: Either fewer than two AMR tools are active or run_hamronization is set to false."
     }
+    
+    if (params.run_profiling) {
+    ch_profiling_input = ch_final_polished_assembly.map { meta, assembly -> 
+        [meta, [assembly]]  // Always pass assembly as a list, set fasta to null
+      
+    }
+    ch_profiling_input.view { "Profiling input: $it" }
+    // Ensure databases_ch is created correctly
+    databases_ch = Channel.fromPath(params.databases)
+        .splitCsv(header: true, sep: ',')
+        .map { row ->
+            def db_meta = [:]
+            db_meta.tool = row.tool
+            db_meta.db_name = row.db_name
+            db_meta.db_params = row.db_params
+            [db_meta, file(row.db_path)]
+        }
 
-    
-    
+    // Calling the PROFILING subworkflow correctly
+    PROFILING(
+        ch_profiling_input,
+        databases_ch
+    )
+
+    ch_versions = ch_versions.mix(PROFILING.out.versions)
+    ch_multiqc_files = ch_multiqc_files.mix(PROFILING.out.raw_profiles.collect { it[1] }.ifEmpty([]))
+}
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)
@@ -382,7 +431,7 @@ workflow METAAMR {
             newLine: true
         ).set { ch_collated_versions }
     
-
+    
     //
     // MODULE: MultiQC
     //

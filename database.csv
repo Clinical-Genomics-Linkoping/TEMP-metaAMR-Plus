@@ -1,0 +1,4 @@
+tool,db_name,db_params,db_path
+kaiju,kaiju_db,,/mnt/reference/Reference_Genomes/Kaiju-nr-euk-db
+centrifuge,centrifuge_db,,/mnt/reference/Reference_Genomes/centrifuge_database
+resfinder,resfinder_db,,/mnt/reference/Resfinder_db

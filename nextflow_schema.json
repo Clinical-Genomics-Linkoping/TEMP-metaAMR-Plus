@@ -143,6 +143,7 @@
                     "fa_icon": "fas fa-question-circle",
                     "hidden": true
                 },
+                
                 "publish_dir_mode": {
                     "type": "string",
                     "default": "copy",
@@ -220,6 +221,44 @@
                     "hidden": true
                 }
             }
+        },
+        
+        "profiling_options": {
+            "title": "Profiling options",
+            "type": "object",
+            "fa_icon": "fas fa-microbes",
+            "description": "Options for taxonomic profiling tools",
+            "properties": {
+                "databases": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Path to CSV file containing database information for profiling tools",
+                    "help_text": "Provide a CSV file with columns: tool, db_name, db_params, db_path",
+                    "fa_icon": "fas fa-database"
+                },
+                "run_profiling": {
+                    "type": "boolean",
+                    "description": "Run taxonomic profiling",
+                    "fa_icon": "fas fa-play",
+                    "default": false
+                },
+                "run_kaiju": {
+                    "type": "boolean",
+                    "description": "Run Kaiju for taxonomic profiling",
+                    "fa_icon": "fas fa-play",
+                    "default": false
+                },
+                "run_centrifuge": {
+                    "type": "boolean",
+                    "description": "Run Centrifuge for taxonomic profiling",
+                    "fa_icon": "fas fa-play",
+                    "default": false
+                
+                }
+            }
         }
     },
     "allOf": [
@@ -234,6 +273,9 @@
         },
         {
             "$ref": "#/$defs/generic_options"
+        },
+        {
+            "$ref": "#/$defs/profiling_options"
         }
     ]
 }

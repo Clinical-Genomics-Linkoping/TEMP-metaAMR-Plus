@@ -9,8 +9,7 @@ process RGI_MAIN {
         'biocontainers/rgi:6.0.3--pyha8f3691_1'}"
 
     input:
-    tuple val(meta), path(fasta)
-    path(card)
+    tuple val(meta), path(fasta), path(card)
     path(wildcard)
 
     output:
