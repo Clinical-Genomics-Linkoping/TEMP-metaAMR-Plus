@@ -1,49 +1,3 @@
-/*process PLASMIDFINDER {
-    tag "$meta.id"
-    label 'process_low'
-
-    conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/plasmidfinder:2.1.6--py310hdfd78af_1':
-        'biocontainers/plasmidfinder:2.1.6--py310hdfd78af_1' }"
-
-    input:
-    tuple val(meta), path(seqs)
-    path plasmidfinder_db
-
-    output:
-    tuple val(meta), path("*.json")                 , emit: json
-    tuple val(meta), path("*.txt")                  , emit: txt
-    tuple val(meta), path("*.tsv")                  , emit: tsv
-    tuple val(meta), path("*-hit_in_genome_seq.fsa"), emit: genome_seq
-    tuple val(meta), path("*-plasmid_seqs.fsa")     , emit: plasmid_seq
-    path "versions.yml"                             , emit: versions
-
-    script:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-
-    """
-    plasmidfinder.py \\
-        $args \\
-        -i $seqs \\
-        -o ./ \\
-        -p $plasmidfinder_db \\
-        -x
-
-    # Rename hard-coded outputs with prefix to avoid name collisions
-    mv data.json ${prefix}.json || true
-    mv results.txt ${prefix}.txt || true
-    mv results_tab.tsv ${prefix}.tsv || true
-    mv Hit_in_genome_seq.fsa ${prefix}-hit_in_genome_seq.fsa || true
-    mv Plasmid_seqs.fsa ${prefix}-plasmid_seqs.fsa || true
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        plasmidfinder: \$(plasmidfinder.py --version 2>&1 | sed 's/^.*plasmidfinder //')
-    END_VERSIONS
-    """
-}*/
 process PLASMIDFINDER {
     tag "$meta.id"
     label 'process_low'
@@ -58,18 +12,22 @@ process PLASMIDFINDER {
     path plasmidfinder_db
 
     output:
-    tuple val(meta), path("*.json")                 , emit: json
-    tuple val(meta), path("*.txt")                  , emit: txt
-    tuple val(meta), path("*.tsv")                  , emit: tsv
-    tuple val(meta), path("*-hit_in_genome_seq.fsa"), emit: genome_seq, optional: true
-    tuple val(meta), path("*-plasmid_seqs.fsa")     , emit: plasmid_seq, optional: true
-    path "versions.yml"                             , emit: versions
+    tuple val(meta), path("*_plasmidfinder.json"), emit: json, optional: true
+    tuple val(meta), path("*_plasmidfinder.txt"), emit: txt, optional: true
+    tuple val(meta), path("*_plasmidfinder.tsv"), emit: tsv, optional: true
+    tuple val(meta), path("*_hit_in_genome_seq.fsa"), emit: genome_seq, optional: true
+    tuple val(meta), path("*_plasmid_seqs.fsa"), emit: plasmid_seq, optional: true
+    path "versions.yml", emit: versions
 
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    if (!prefix) {
+        prefix = "sample"
+    }
 
     """
+    set -e
     echo "Debug: Input sequence file: $seqs"
     echo "Debug: PlasmidFinder database path: $plasmidfinder_db"
     echo "Debug: Output prefix: $prefix"
@@ -93,16 +51,30 @@ process PLASMIDFINDER {
 
     echo "Debug: PlasmidFinder command completed"
 
-    # Rename hard-coded outputs with prefix to avoid name collisions
-    mv data.json ${prefix}.json || echo "Warning: data.json not found"
-    mv results.txt ${prefix}.txt || echo "Warning: results.txt not found"
-    mv results_tab.tsv ${prefix}.tsv || echo "Warning: results_tab.tsv not found"
-    mv Hit_in_genome_seq.fsa ${prefix}-hit_in_genome_seq.fsa || echo "Warning: Hit_in_genome_seq.fsa not found"
-    mv Plasmid_seqs.fsa ${prefix}-plasmid_seqs.fsa || echo "Warning: Plasmid_seqs.fsa not found"
+    # List directory contents
+    echo "Debug: Directory contents after PlasmidFinder:"
+    ls -l
+
+    # Rename files using cp instead of mv
+    cp data.json ${prefix}_plasmidfinder.json || echo "Warning: data.json not found"
+    cp results.txt ${prefix}_plasmidfinder.txt || echo "Warning: results.txt not found"
+    cp results_tab.tsv ${prefix}_plasmidfinder.tsv || echo "Warning: results_tab.tsv not found"
+    cp Hit_in_genome_seq.fsa ${prefix}_hit_in_genome_seq.fsa || echo "Warning: Hit_in_genome_seq.fsa not found"
+    cp Plasmid_seqs.fsa ${prefix}_plasmid_seqs.fsa || echo "Warning: Plasmid_seqs.fsa not found"
+
+    # List directory contents again
+    echo "Debug: Directory contents after renaming:"
+    ls -l
+
+    # Get PlasmidFinder version and sanitize it
+    PLASMIDFINDER_VERSION=\$(plasmidfinder.py --version 2>&1 | sed 's/^.*PlasmidFinder //' | tr -d '\\n' | tr -d '\\r' || echo "unknown")
+    echo "Debug: PlasmidFinder version: \${PLASMIDFINDER_VERSION}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        plasmidfinder: \$(plasmidfinder.py --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+' || echo "unknown")
+        plasmidfinder: "\${PLASMIDFINDER_VERSION}"
     END_VERSIONS
+
+    echo "Debug: Process completed successfully"
     """
 }

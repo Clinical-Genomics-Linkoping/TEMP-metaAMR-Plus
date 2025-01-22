@@ -30,7 +30,8 @@ process ABRICATE_RUN {
         --db ${db_name} \\
         --minid ${params.abricate_minid} \\
         --mincov ${params.abricate_mincov} \\
-        ${assembly} > ${meta.id}_abricate.tsv
+        ${assembly} > ${prefix}_abricate.tsv
+
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

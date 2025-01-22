@@ -12,8 +12,8 @@ process AMRFINDERPLUS_RUN {
     path db
 
     output:
-    tuple val(meta), path("${prefix}.tsv")          , emit: report
-    tuple val(meta), path("${prefix}-mutations.tsv"), emit: mutation_report, optional: true
+    tuple val(meta), path("${prefix}_amrfinder.tsv")            , emit: report
+    tuple val(meta), path("${prefix}_amrfinder_mutations.tsv"), emit: mutation_report, optional: true
     path "versions.yml"                             , emit: versions
     env VER                                         , emit: tool_version
     env DBVER                                       , emit: db_version
@@ -35,15 +35,19 @@ process AMRFINDERPLUS_RUN {
         }
     }
     """
+    set -e  # Exit on any error
     if [ "$is_compressed_fasta" == "true" ]; then
         gzip -c -d $fasta > $fasta_name
     fi
 
-    if [ "$is_compressed_db" == "true" ]; then
+    if [ -d "amrfinderdb" ]; then
+        echo "Using existing AMRFinder database"
+    elif [ "$is_compressed_db" == "true" ]; then
         mkdir amrfinderdb
         tar xzvf $db -C amrfinderdb
     else
-        mv $db amrfinderdb
+        mkdir amrfinderdb
+        mv $db amrfinderdb/
     fi
 
     amrfinder \\
@@ -51,7 +55,9 @@ process AMRFINDERPLUS_RUN {
         $organism_param \\
         $args \\
         --database amrfinderdb \\
-        --threads $task.cpus > ${prefix}.tsv
+        --threads $task.cpus > ${prefix}_amrfinder.tsv
+
+
 
     VER=\$(amrfinder --version)
     DBVER=\$(echo \$(amrfinder --database amrfinderdb --database_version 2> stdout) | rev | cut -f 1 -d ' ' | rev)

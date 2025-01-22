@@ -80,7 +80,6 @@ if (params.hostremoval_index) {
     ch_reference_index = [] 
 }
 
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT LOCAL MODULES/SUBWORKFLOWS
@@ -100,6 +99,7 @@ include { VALIDATE_FASTA } from '../modules/local/validate_fasta'
 include { PLASCLASS } from '../modules/local/plasclass'
 include { PLASCLASS_POSTPROCESS } from '../modules/local/plasclass_postprocess.nf'
 include { PROFILING } from '../subworkflows/local/PROFILING'
+include { SUMMARY } from '../subworkflows/local/summary'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -230,11 +230,16 @@ workflow METAAMR {
     
     // Mix versions and outputs into global channels
         ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+    
+        
         RESFINDER_RUN.out.all_outputs.view { meta, files -> 
             "ResFinder outputs for ${meta.id}: ${files.collect { it.getName() }.join(', ')}"
         }
     }
+    // Outside the if block, ensure ch_resfinder is a valid channel even if ResFinder wasn't run
+    
     if (params.run_abricate) {
+      
         log.info "Running Abricate"
 
         ch_abricate_input = ch_final_polished_assembly
@@ -251,6 +256,7 @@ workflow METAAMR {
     }
     
     if (params.run_amrfinderplus) {
+        
         log.info "Running AMRFinderPlus"
 
         ch_amrfinderplus_input = ch_final_polished_assembly
@@ -273,6 +279,7 @@ workflow METAAMR {
 
 
     if (params.run_rgi) {
+        
         log.info "Running RGI"
 
         ch_rgi_input = ch_final_polished_assembly
@@ -309,6 +316,7 @@ workflow METAAMR {
     ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
 
     if (params.run_plasmidfinder) {
+        
         log.info "Running PlasmidFinder"
 
    // Combine validated assemblies with PlasmidFinder database
@@ -356,6 +364,7 @@ workflow METAAMR {
 */
     // Run PlasClass
     if (params.run_plasclass) {
+        
         log.info "Running PlasClass"
 
     // Step 1: Run PlasClass
@@ -420,7 +429,10 @@ workflow METAAMR {
 
     ch_versions = ch_versions.mix(PROFILING.out.versions)
     ch_multiqc_files = ch_multiqc_files.mix(PROFILING.out.raw_profiles.collect { it[1] }.ifEmpty([]))
+
+
 }
+    
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)

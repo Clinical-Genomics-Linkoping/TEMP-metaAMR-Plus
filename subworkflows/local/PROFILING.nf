@@ -5,7 +5,6 @@ include { KAIJU_KAIJU2KRONA } from '../../modules/nf-core/kaiju/kaiju2krona/main
 include { KRONA_KTIMPORTTEXT as KRONA_KAIJU } from '../../modules/nf-core/krona/ktimporttext/main'
 include { KRONA_KTIMPORTTEXT as KRONA_CENTRIFUGE } from '../../modules/nf-core/krona/ktimporttext/main'
 
-
 workflow PROFILING {
     take:
     reads_ch     // channel: [ val(meta), [ reads ] ]
@@ -15,12 +14,14 @@ workflow PROFILING {
     ch_versions = Channel.empty()
     ch_raw_classifications = Channel.empty()
     ch_raw_profiles = Channel.empty()
+    ch_krona_html = Channel.empty()
 
     // Prepare input for both FASTQ and FASTA compatibility
     ch_profiling_input = reads_ch.map { meta, reads -> 
         def input_reads = reads.flatten()  // Flatten the list of reads
         [meta, input_reads]
     }
+
     // Run Kaiju
     if (params.run_kaiju) {
         ch_kaiju_db = databases_ch.filter { it[0].tool == 'kaiju' }.map { it[1] }
@@ -42,20 +43,18 @@ workflow PROFILING {
         KAIJU_KAIJU2KRONA(
             KAIJU_KAIJU.out.results,
             ch_kaiju_db
-           
         )
 
         KRONA_KAIJU(
-            //KAIJU_KAIJU2KRONA.out.txt,
             KAIJU_KAIJU2KRONA.out.txt.map { meta, txt -> 
                 def new_meta = meta + [tool: 'kaiju']
                 [new_meta, txt]
             }
-            
-
         )
 
+        ch_krona_html = ch_krona_html.mix(KRONA_KAIJU.out.html)
     }
+
     // Run Centrifuge
     if (params.run_centrifuge) {
         ch_centrifuge_db = databases_ch.filter { it[0].tool == 'centrifuge' }.map { it[1] }
@@ -77,19 +76,14 @@ workflow PROFILING {
         ch_raw_classifications = ch_raw_classifications.mix(CENTRIFUGE_CENTRIFUGE.out.results)
      
         KRONA_CENTRIFUGE(
-            //CENTRIFUGE_CENTRIFUGE.out.results,
             CENTRIFUGE_CENTRIFUGE.out.results.map { meta, txt -> 
                 def new_meta = meta + [tool: 'centrifuge']
                 [new_meta, txt]
             }
-           
         )
 
+        ch_krona_html = ch_krona_html.mix(KRONA_CENTRIFUGE.out.html)
     }
-
-    ch_krona_html = Channel.empty()
-    ch_krona_html = ch_krona_html.mix(KRONA_KAIJU.out.html.ifEmpty([]))
-    ch_krona_html = ch_krona_html.mix(KRONA_CENTRIFUGE.out.html.ifEmpty([]))
 
     // Emit Outputs
     emit:

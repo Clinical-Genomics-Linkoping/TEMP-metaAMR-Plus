@@ -12,7 +12,7 @@ process KAIJU_KAIJU {
     path(db)
 
     output:
-    tuple val(meta), path('*.tsv'), emit: results
+    tuple val(meta), path('*_kaiju.tsv'), emit: results
     path "versions.yml"           , emit: versions
 
     when:
@@ -30,7 +30,7 @@ process KAIJU_KAIJU {
         -z $task.cpus \\
         -t \$dbnodes \\
         -f \$dbname \\
-        -o ${prefix}.tsv \\
+        -o ${prefix}_kaiju.tsv \\
         $input
 
     cat <<-END_VERSIONS > versions.yml
@@ -44,12 +44,11 @@ process KAIJU_KAIJU {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def input = meta.single_end ? "-i ${reads}" : "-i ${reads[0]} -j ${reads[1]}"
     """
-    touch ${prefix}.tsv
+    touch ${prefix}_kaiju.tsv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         kaiju: \$(echo \$( kaiju -h 2>&1 | sed -n 1p | sed 's/^.*Kaiju //' ))
     END_VERSIONS
     """
-
 }

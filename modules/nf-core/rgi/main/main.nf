@@ -13,8 +13,8 @@ process RGI_MAIN {
     path(wildcard)
 
     output:
-    tuple val(meta), path("${prefix}.json"), emit: json
-    tuple val(meta), path("${prefix}.txt"), emit: tsv
+    tuple val(meta), path("${prefix}_rgi.json"), emit: json
+    tuple val(meta), path("${prefix}_rgi.txt"), emit: tsv
     tuple val(meta), path("${prefix}_temp/"), emit: tmp
     path "versions.yml", emit: versions
 
@@ -59,7 +59,7 @@ process RGI_MAIN {
     rgi main \\
         $args2 \\
         --num_threads ${task.cpus} \\
-        --output_file ${prefix} \\
+        --output_file ${prefix}_rgi \\
         --input_sequence ${fasta}
 
     # Move output files to temp directory
