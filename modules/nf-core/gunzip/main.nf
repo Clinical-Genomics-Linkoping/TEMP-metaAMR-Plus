@@ -24,9 +24,7 @@ process GUNZIP {
     def prefix      = task.ext.prefix ?: name
     gunzip          = prefix + ".$extension"
     """
-    # Not calling gunzip itself because it creates files
-    # with the original group ownership rather than the
-    # default one for that user / the work directory
+    
     gzip \\
         -cd \\
         $args \\

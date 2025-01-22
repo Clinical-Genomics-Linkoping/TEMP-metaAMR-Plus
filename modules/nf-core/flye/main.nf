@@ -29,12 +29,8 @@ process FLYE {
     script:
     def args = task.ext.args ?: ''
     def prefix = meta.id.toString().replaceAll(/\W/, "_")
-    //def valid_mode = ["--pacbio-raw", "--pacbio-corr", "--pacbio-hifi", "--nano-raw", "--nano-corr", "--nano-hq"]
-    //if ( !valid_mode.contains(mode) )  { error "Unrecognised mode to run Flye. Options: ${valid_mode.join(', ')}" }
-    //def flye_args = params.flye_args
     
-
-
+    
     """
     echo "Mode: ${mode}"
     echo "Args: ${args}"

@@ -43,13 +43,6 @@ if (params.input) {
     error("Input samplesheet not specified")
 }
 
-// Debug: Print information about each sample
-ch_input.view { meta, reads ->
-    "Debug: Processing sample ${meta.id}, single_end: ${meta.single_end}, reads: ${reads}"
-}
-
-
-
 // Check if databases file is provided and create a channel
 ch_databases = params.databases ? Channel.fromPath(params.databases)
     .splitCsv(header:true, sep:',')
@@ -67,8 +60,6 @@ if (params.databases) {
 } else {
     log.info "No database file provided. Tools will use default databases or prepare them as needed."
 }
-
-
 
 
 if (params.hostremoval_reference) { 
@@ -122,8 +113,6 @@ workflow METAAMR {
     // Prepare tool-specific databases
     PREPARE_TOOL_DBS()
     
-
-    PREPARE_TOOL_DBS.out.rgi_db.view { "Debug: RGI DB from PREPARE_TOOL_DBS: $it" }
     def ch_rgi_db_extracted = PREPARE_TOOL_DBS.out.rgi_db.branch {
         compressed: it.toString().endsWith('.tar.gz')
         ready: true
@@ -131,7 +120,7 @@ workflow METAAMR {
   
     EXTRACT_RGI_DB(ch_rgi_db_extracted.compressed)
     def ch_rgi_db_final = ch_rgi_db_extracted.ready.mix(EXTRACT_RGI_DB.out.rgi_db).first()
-    ch_rgi_db_final.view { "Debug: Final RGI DB: $it" }
+    
     //
     // MODULE: Run FastQC
     //
@@ -208,35 +197,31 @@ workflow METAAMR {
     
     ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
 
-    
     if (params.run_resfinder) {
-        log.info "Running ResFinder"
+    log.info "Running ResFinder"
 
-    // Prepare input channel for all cases
-        ch_resfinder_input = ch_final_polished_assembly
-            .map { meta, fasta -> [meta, [], fasta] } // For polished assemblies (no FASTQ)
-
-        ch_resfinder_input
-            .combine(PREPARE_TOOL_DBS.out.resfinder_db)
-            .map { meta, fastq, fasta, db -> [ meta, fastq, fasta, db ] }
-            .view { meta, fastq, fasta, db -> 
-                "Debug: ResFinder input - Sample: ${meta.id}, FASTQ: ${fastq}, FASTA: ${fasta}, DB: ${db}"
-            }
-            .set { ch_resfinder_combined_input }
-
-        RESFINDER_RUN(
-            ch_resfinder_combined_input
-        )
-    
-    // Mix versions and outputs into global channels
-        ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-    
-        
-        RESFINDER_RUN.out.all_outputs.view { meta, files -> 
-            "ResFinder outputs for ${meta.id}: ${files.collect { it.getName() }.join(', ')}"
+    // Prepare input channel for both FASTA and FASTQ cases
+    ch_resfinder_input = ch_final_polished_assembly
+        .map { meta, file -> 
+            def isFastq = file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
+            def fastq = isFastq ? file : []
+            def fasta = isFastq ? [] : file
+            [meta, fastq, fasta]
         }
-    }
-    // Outside the if block, ensure ch_resfinder is a valid channel even if ResFinder wasn't run
+        .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+        .map { meta, fastq, fasta, db -> 
+            [ meta, fastq, fasta, db, [] ]  // Added empty list for args
+        }
+
+    RESFINDER_RUN(ch_resfinder_input)
+
+    // Mix versions and outputs into global channels
+    ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+    
+    // Capture all ResFinder outputs
+    ch_resfinder = RESFINDER_RUN.out.all_outputs
+}
+    
     
     if (params.run_abricate) {
       
@@ -256,13 +241,11 @@ workflow METAAMR {
     }
     
     if (params.run_amrfinderplus) {
-        
         log.info "Running AMRFinderPlus"
 
         ch_amrfinderplus_input = ch_final_polished_assembly
-        ch_amrfinderplus_input.combine(PREPARE_TOOL_DBS.out.amrfinderplus_db).view { meta, assembly, db ->
-            "Debug: AMRFinderPlus input - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
-        }
+        ch_amrfinderplus_input.combine(PREPARE_TOOL_DBS.out.amrfinderplus_db)
+        
 
         AMRFINDERPLUS_RUN(
             ch_amrfinderplus_input,
@@ -279,24 +262,19 @@ workflow METAAMR {
 
 
     if (params.run_rgi) {
-        
         log.info "Running RGI"
 
         ch_rgi_input = ch_final_polished_assembly
             .map { meta, assembly -> [ meta, assembly ] }
-            .view { meta, assembly -> "Debug: Sample ready for RGI: ${meta.id}" }
-
+            
         ch_rgi_input
             .combine(ch_rgi_db_final)
-            .map { meta, assembly, db -> [ meta, assembly, db ] }  // Ensure correct structure
-            .view { meta, assembly, db -> 
-                "Debug: Combined input for RGI - Sample: ${meta.id}, Assembly: ${assembly}, DB: ${db}"
-            }
+            .map { meta, assembly, db -> [ meta, assembly, db ] }  
             .set { ch_rgi_combined_input }
 
         RGI_MAIN(
             ch_rgi_combined_input,
-            []  // Wildcard input, set to empty if not using
+            []  
         )
 
         ch_versions = ch_versions.mix(RGI_MAIN.out.versions)
@@ -316,7 +294,6 @@ workflow METAAMR {
     ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
 
     if (params.run_plasmidfinder) {
-        
         log.info "Running PlasmidFinder"
 
    // Combine validated assemblies with PlasmidFinder database
@@ -336,32 +313,7 @@ workflow METAAMR {
             PLASMIDFINDER.out.tsv.collect { it[1] }.ifEmpty([])
         )
     }
-        
-    // Run plasclass
-   /* if (params.run_plasclass) {
-        log.info "Running PlasClass"
-
-        ch_plasclass_input = ch_final_polished_assembly
-
-        ch_plasclass_input.view { meta, assembly ->
-            "Debug: PlasClass input - Sample: ${meta.id}, Assembly: ${assembly}"
-        }
-
-        PLASCLASS(VALIDATE_FASTA.out.validated_fasta)
-
-        ch_versions = ch_versions.mix(PLASCLASS.out.versions)
-        PLASCLASS.out.report.view { meta, report -> 
-                "PlasClass outputs for ${meta.id}: ${report.getName()}"
-            }
-        ch_multiqc_files = ch_multiqc_files.mix(PLASCLASS.out.report.collect{it[1]}.ifEmpty([]))
-    
-
-
-    // Debug MultiQC input files after adding PlasmidFinder results
-        ch_multiqc_files.view { "Debug: MultiQC input files after adding PlasmidFinder - $it" }
-
-    }
-*/
+ 
     // Run PlasClass
     if (params.run_plasclass) {
         
@@ -406,7 +358,7 @@ workflow METAAMR {
     
     if (params.run_profiling) {
     ch_profiling_input = ch_final_polished_assembly.map { meta, assembly -> 
-        [meta, [assembly]]  // Always pass assembly as a list, set fasta to null
+        [meta, [assembly]]  //  pass assembly as a list, set fasta to null
       
     }
     ch_profiling_input.view { "Profiling input: $it" }
@@ -421,7 +373,7 @@ workflow METAAMR {
             [db_meta, file(row.db_path)]
         }
 
-    // Calling the PROFILING subworkflow correctly
+    // Calling the PROFILING subworkflow 
     PROFILING(
         ch_profiling_input,
         databases_ch

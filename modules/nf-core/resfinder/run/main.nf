@@ -18,19 +18,18 @@ process RESFINDER_RUN {
     path "versions.yml", emit: versions
 
     script:
-    prefix = task.ext.prefix ?: "${meta.id}"
-    def input_data = fastq ? "-ifq ${fastq[0]} ${fastq[1]}" : "-ifa ${fasta}"
+    // Determine the prefix and input method
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    def input_cmd = fastq ? "-ifq ${fastq[0]} ${fastq[1]}" : "-ifa ${fasta}"
     def decompress_cmd = fasta.toString().endsWith('.gz') ? "gunzip -c ${fasta} > decompressed.fasta" : "cp ${fasta} decompressed.fasta"
     def fasta_input = "decompressed.fasta"
-    def extra_args = args ?: ""  // Prevent null args being passed
+    def extra_args = args ?: ""
 
     """
-    echo "Processing sample: ${meta.id}"
+    # Decompress or copy the FASTA file
     ${decompress_cmd}
-    
-    echo "Debug: Running ResFinder command:"
-    echo "run_resfinder.py -acq -ifa ${fasta_input} -db_res $db -db_point $db -o ${meta.id} ${extra_args}"
-    
+
+    # Run ResFinder
     run_resfinder.py \\
         -acq \\
         -ifa ${fasta_input} \\
@@ -38,28 +37,21 @@ process RESFINDER_RUN {
         -db_point $db \\
         -o ${meta.id} \\
         ${extra_args}
-    
-    echo "Debug: ResFinder completed for ${meta.id}"
-    echo "Debug: Renaming output files:"
-    
+
+    # Rename outputs with the sample ID prefix
     cd ${meta.id}
     for file in *; do
         if [ -f "\$file" ]; then
             mv "\$file" "${meta.id}-\$file"
-            echo "Renamed \$file to ${meta.id}-\$file"
         fi
     done
-    
+
     if [ -d "resfinder_blast" ]; then
         mv resfinder_blast ${meta.id}-resfinder_blast
-        echo "Renamed resfinder_blast to ${meta.id}-resfinder_blast"
     fi
-    
     cd ..
-    
-    echo "Debug: Final output files:"
-    ls -l ${meta.id}/
-    
+
+    # Generate the versions file
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         resfinder: \$(run_resfinder.py --version 2>&1 | sed 's/^.*ResFinder //')

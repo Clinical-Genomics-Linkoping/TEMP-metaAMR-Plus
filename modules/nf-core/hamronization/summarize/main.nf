@@ -47,39 +47,3 @@ process HAMRONIZATION_SUMMARIZE {
     END_VERSIONS
     """
 }
-/*process HAMRONIZATION_SUMMARIZE {
-    label 'process_single'
-
-    conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/hamronization:1.1.4--pyhdfd78af_0':
-        'biocontainers/hamronization:1.1.4--pyhdfd78af_0' }"
-
-    input:
-    tuple val(meta), path(reports) // Expecting tuple input
-    val(format)
-
-    output:
-    path("hamronization_combined_report.json"), optional: true, emit: json
-    path("hamronization_combined_report.tsv") , optional: true, emit: tsv
-    path("hamronization_combined_report.html"), optional: true, emit: html
-    path("versions.yml")                       , emit: versions
-
-    script:
-    def args = task.ext.args ?: ''
-    def outformat = format == 'interactive' ? 'html' : format
-    """
-    hamronize \\
-        summarize \\
-        ${reports.join(' ')} \\
-        -t ${format} \\
-        $args \\
-        -o hamronization_combined_report.${outformat}
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        hamronization: \$(hamronize --version | cut -f2 -d ' ')
-    END_VERSIONS
-    """
-}
-*/

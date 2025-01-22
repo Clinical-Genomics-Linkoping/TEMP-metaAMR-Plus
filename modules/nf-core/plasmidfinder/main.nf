@@ -28,9 +28,7 @@ process PLASMIDFINDER {
 
     """
     set -e
-    echo "Debug: Input sequence file: $seqs"
-    echo "Debug: PlasmidFinder database path: $plasmidfinder_db"
-    echo "Debug: Output prefix: $prefix"
+    
 
     if [ ! -f "$seqs" ]; then
         echo "Error: Input sequence file does not exist: $seqs" >&2
@@ -49,32 +47,25 @@ process PLASMIDFINDER {
         -p $plasmidfinder_db \\
         -x
 
-    echo "Debug: PlasmidFinder command completed"
-
-    # List directory contents
-    echo "Debug: Directory contents after PlasmidFinder:"
-    ls -l
-
-    # Rename files using cp instead of mv
+    
     cp data.json ${prefix}_plasmidfinder.json || echo "Warning: data.json not found"
     cp results.txt ${prefix}_plasmidfinder.txt || echo "Warning: results.txt not found"
     cp results_tab.tsv ${prefix}_plasmidfinder.tsv || echo "Warning: results_tab.tsv not found"
     cp Hit_in_genome_seq.fsa ${prefix}_hit_in_genome_seq.fsa || echo "Warning: Hit_in_genome_seq.fsa not found"
     cp Plasmid_seqs.fsa ${prefix}_plasmid_seqs.fsa || echo "Warning: Plasmid_seqs.fsa not found"
 
-    # List directory contents again
-    echo "Debug: Directory contents after renaming:"
+    # List directory contents 
     ls -l
 
     # Get PlasmidFinder version and sanitize it
     PLASMIDFINDER_VERSION=\$(plasmidfinder.py --version 2>&1 | sed 's/^.*PlasmidFinder //' | tr -d '\\n' | tr -d '\\r' || echo "unknown")
-    echo "Debug: PlasmidFinder version: \${PLASMIDFINDER_VERSION}"
+    
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         plasmidfinder: "\${PLASMIDFINDER_VERSION}"
     END_VERSIONS
 
-    echo "Debug: Process completed successfully"
+    
     """
 }

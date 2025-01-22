@@ -24,11 +24,8 @@ process QUAST {
     task.ext.when == null || task.ext.when
 
     script:
-    //def args = "--meta"
-    //def args      = task.ext.args   ?: ''
     prefix        = task.ext.prefix ?: "${meta.id}"
-    //def features  = gff             ?  "--features $gff" : ''
-    //def reference = fasta           ?  "-r $fasta"       : ''
+    
     """
     gunzip -c ${consensus} > ${prefix}.assembly.fasta
     # Check if the decompressed file exists

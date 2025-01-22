@@ -18,58 +18,6 @@ def prepare_db(tool, db_path, download_flag, default_db = null) {
     }
 }
 
-/*
-workflow PREPARE_TOOL_DBS {
-    main:
-    ch_resfinder_db = params.download_resfinder_db ? Channel.of('resfinder') : Channel.empty()
-    ch_rgi_db = prepare_db('rgi', params.rgi_db, params.download_rgi_db)
-    ch_amrfinderplus_db = prepare_db('amrfinderplus', params.amrfinderplus_db, params.download_amrfinderplus_db)
-    ch_plasmidfinder_db = prepare_db('plasmidfinder', params.plasmidfinder_db, params.download_plasmidfinder_db)
-
-    
-    
-    // Process ResFinder DB
-    ch_resfinder_db_downloaded = ch_resfinder_db.branch {
-        to_download: it == 'resfinder'
-        ready: true
-    }
-    ch_resfinder_db_downloaded.to_download | RESFINDER_DB_DOWNLOAD
-    ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(RESFINDER_DB_DOWNLOAD.out.db).first()
-
-    // Process RGI DB
-    RGI_DB_DOWNLOAD(ch_rgi_db)
-    ch_rgi_db_final = RGI_DB_DOWNLOAD.out.db
-
-
-    // Process AMRFinderPlus DB
-    ch_amrfinderplus_db_downloaded = ch_amrfinderplus_db.branch {
-        to_download: it == 'amrfinderplus'
-        ready: true
-    }
-    // Run AMRFINDERPLUS_UPDATE only if we need to download the database
-    if (params.download_amrfinderplus_db) {
-        AMRFINDERPLUS_UPDATE()
-        ch_amrfinderplus_db_final = AMRFINDERPLUS_UPDATE.out.db
-    } else {
-        ch_amrfinderplus_db_final = ch_amrfinderplus_db_downloaded.ready
-    }
-
-
-    // Process PlasmidFinder DB
-    ch_plasmidfinder_db_downloaded = ch_plasmidfinder_db.branch {
-        to_download: it == 'plasmidfinder'
-        ready: true
-    }
-    ch_plasmidfinder_db_downloaded.to_download | PLASMIDFINDER_DB_DOWNLOAD
-    ch_plasmidfinder_db_final = ch_plasmidfinder_db_downloaded.ready.mix(PLASMIDFINDER_DB_DOWNLOAD.out.db).first()
-
-   
-    emit:
-    resfinder_db     = ch_resfinder_db_final
-    rgi_db = ch_rgi_db_final
-    amrfinderplus_db = ch_amrfinderplus_db_final
-    plasmidfinder_db = ch_plasmidfinder_db_final
-}*/
 workflow PREPARE_TOOL_DBS {
     main:
     // Create channels for each database

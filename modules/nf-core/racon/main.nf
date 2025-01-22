@@ -22,7 +22,7 @@ process RACON {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    echo "Debug: Starting RACON process round ${racon_round}"
+    
     echo "Input reads: $reads"
     echo "Input assembly: $assembly"
     echo "Input PAF: $paf"
@@ -35,19 +35,16 @@ process RACON {
         "$assembly" \\
         > ${prefix}_racon${racon_round}_assembly.fasta
 
-    echo "Debug: RACON completed. Checking output."
-    ls -l
+    
+    
 
     if [ -f "${prefix}_racon${racon_round}_assembly.fasta" ]; then
-        echo "Debug: ${prefix}_racon${racon_round}_assembly.fasta exists. Compressing."
         gzip -f ${prefix}_racon${racon_round}_assembly.fasta
     else
         echo "Error: ${prefix}_racon${racon_round}_assembly.fasta was not created by RACON"
         exit 1
     fi
 
-    echo "Debug: Final directory contents:"
-    ls -l
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
