@@ -18,31 +18,25 @@ workflow PROFILING {
 
     // Prepare input for both FASTQ and FASTA compatibility
     ch_profiling_input = reads_ch.map { meta, reads -> 
-        def input_reads = reads.flatten()  // Flatten the list of reads
+        def input_reads = reads instanceof List ? reads.flatten() : [reads]
         [meta, input_reads]
     }
 
     // Run Kaiju
     if (params.run_kaiju) {
         ch_kaiju_db = databases_ch.filter { it[0].tool == 'kaiju' }.map { it[1] }
-        ch_kaiju_input = reads_ch
-            .combine(ch_kaiju_db)
-            .map { meta, reads, db -> 
-                [meta, reads.flatten(), db]  // Flatten the reads list
-            }
-
-        ch_kaiju_input.view { "Kaiju input: $it" }
+        ch_kaiju_input = ch_profiling_input.combine(ch_kaiju_db)
 
         KAIJU_KAIJU(
             ch_kaiju_input.map { meta, reads, db -> [meta, reads] },
-            ch_kaiju_input.map { meta, reads, db -> db }.unique()
+            ch_kaiju_input.map { meta, reads, db -> db }.first()
         )
         ch_versions = ch_versions.mix(KAIJU_KAIJU.out.versions)
         ch_raw_classifications = ch_raw_classifications.mix(KAIJU_KAIJU.out.results)
 
         KAIJU_KAIJU2KRONA(
             KAIJU_KAIJU.out.results,
-            ch_kaiju_db
+            ch_kaiju_db.first()
         )
 
         KRONA_KAIJU(
@@ -54,37 +48,35 @@ workflow PROFILING {
 
         ch_krona_html = ch_krona_html.mix(KRONA_KAIJU.out.html)
     }
-
     // Run Centrifuge
-    if (params.run_centrifuge) {
-        ch_centrifuge_db = databases_ch.filter { it[0].tool == 'centrifuge' }.map { it[1] }
-        ch_centrifuge_input = reads_ch
-            .combine(ch_centrifuge_db)
-            .map { meta, reads, db -> 
-                [meta, reads[0], db]  // Take the first (and only) element of reads
-            }
+if (params.run_centrifuge) {
+    ch_centrifuge_db = databases_ch.filter { it[0].tool == 'centrifuge' }.map { it[1] }
+    ch_centrifuge_input = ch_profiling_input.combine(ch_centrifuge_db)
 
-        ch_centrifuge_input.view { "Centrifuge input: $it" }
+    CENTRIFUGE_CENTRIFUGE(
+        ch_centrifuge_input.map { meta, reads, db -> [meta, reads] },
+        ch_centrifuge_input.map { meta, reads, db -> db }.first(),
+        params.save_centrifuge_unclassified,
+        params.save_centrifuge_classified
+    )
+    ch_versions = ch_versions.mix(CENTRIFUGE_CENTRIFUGE.out.versions)
+    ch_raw_classifications = ch_raw_classifications.mix(CENTRIFUGE_CENTRIFUGE.out.results)
 
-        CENTRIFUGE_CENTRIFUGE(
-            ch_centrifuge_input.map { meta, reads, db -> [meta, reads] },
-            ch_centrifuge_input.map { meta, reads, db -> db }.unique(),
-            params.save_centrifuge_unclassified,
-            params.save_centrifuge_classified
-        )
-        ch_versions = ch_versions.mix(CENTRIFUGE_CENTRIFUGE.out.versions)
-        ch_raw_classifications = ch_raw_classifications.mix(CENTRIFUGE_CENTRIFUGE.out.results)
-     
-        KRONA_CENTRIFUGE(
-            CENTRIFUGE_CENTRIFUGE.out.results.map { meta, txt -> 
-                def new_meta = meta + [tool: 'centrifuge']
-                [new_meta, txt]
-            }
-        )
+    CENTRIFUGE_KREPORT(
+        CENTRIFUGE_CENTRIFUGE.out.results,
+        ch_centrifuge_db.first()
+    )
 
-        ch_krona_html = ch_krona_html.mix(KRONA_CENTRIFUGE.out.html)
-    }
+    KRONA_CENTRIFUGE(
+        CENTRIFUGE_KREPORT.out.kreport.map { meta, txt -> 
+            def new_meta = meta + [tool: 'centrifuge']
+            [new_meta, txt]
+        }
+    )
 
+    ch_krona_html = ch_krona_html.mix(KRONA_CENTRIFUGE.out.html)
+}
+    
     // Emit Outputs
     emit:
     raw_classifications = ch_raw_classifications

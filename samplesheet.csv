@@ -1,2 +1,3 @@
 sample,fastq_1
-Eco,/mnt/projects/CGLi_Projects/Jyotirmoy/WP3.2/Test_data/Ecoli.fastq.gz
+NP7,/mnt/projects/metaamr/test-samples/NP07.fastq.gz
+NP1,/mnt/projects/metaamr/test-samples/NP01.fastq.gz
