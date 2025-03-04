@@ -1,6 +1,7 @@
 include { DOWNLOAD_DB as RESFINDER_DB_DOWNLOAD } from '../modules/local/download_db'
 include { DOWNLOAD_DB as RGI_DB_DOWNLOAD } from '../modules/local/download_db'
 include { DOWNLOAD_DB as AMRFINDERPLUS_DB_DOWNLOAD } from '../modules/local/download_db'
+include { RESFINDER_INDEX } from '../modules/local/RESFINDER_INDEX'
 include { DOWNLOAD_DB as ABRICATE_DB_DOWNLOAD } from '../modules/local/download_db'
 include { AMRFINDERPLUS_UPDATE } from '../modules/nf-core/amrfinderplus/update/main'
 include { GUNZIP } from '../modules/nf-core/gunzip/main'
@@ -32,13 +33,32 @@ workflow PREPARE_TOOL_DBS {
     ch_amrfinderplus_db.view { "AMRFinderPlus tool: $it" }
     ch_plasmidfinder_db.view { "PlasmidFinder tool: $it" }
 
-    // Process ResFinder DB
+    /*// Process ResFinder DB
     ch_resfinder_db_downloaded = ch_resfinder_db.branch {
         to_download: it == 'resfinder'
         ready: true
     }
     ch_resfinder_db_downloaded.to_download | RESFINDER_DB_DOWNLOAD
     ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(RESFINDER_DB_DOWNLOAD.out.db).first()
+*/
+     // Process ResFinder DB with indexing
+    
+    // Process ResFinder DB with indexing
+    ch_resfinder_db_downloaded = ch_resfinder_db.branch {
+        to_download: it == 'resfinder'
+        ready: true
+    }
+    ch_resfinder_db_downloaded.to_download | RESFINDER_DB_DOWNLOAD
+
+// Automatically run indexing after database download
+    ch_indexed_resfinder_db = RESFINDER_INDEX(RESFINDER_DB_DOWNLOAD.out.db)
+        .map { db_files -> file(db_files[0]).parent }
+
+// Ensure ResFinder gets the indexed DB
+    ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(ch_indexed_resfinder_db).first()
+
+
+
 
     // Process RGI DB
     RGI_DB_DOWNLOAD(ch_rgi_db)

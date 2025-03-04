@@ -117,7 +117,7 @@ workflow METAAMR {
         compressed: it.toString().endsWith('.tar.gz')
         ready: true
     }
-  
+    
     EXTRACT_RGI_DB(ch_rgi_db_extracted.compressed)
     def ch_rgi_db_final = ch_rgi_db_extracted.ready.mix(EXTRACT_RGI_DB.out.rgi_db).first()
     
@@ -197,6 +197,82 @@ workflow METAAMR {
     
     ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
 
+
+
+
+   if (params.run_resfinder) {
+    log.info "Running ResFinder"
+
+    // Determine if we are using reads (FASTQ) or an assembly (FASTA)
+ch_resfinder_input = params.perform_assembly 
+    ? (params.perform_polish_assembly 
+        ? (params.use_second_polish 
+            ? ch_second_polished_assembly 
+            : ch_first_polished_assembly)
+        : ch_assembled_contigs)
+    : PORECHOP_PORECHOP.out.reads
+
+// Ensure correct input structure (fixing empty list issue)
+ch_resfinder_input = ch_resfinder_input.map { meta, file -> 
+    def isAssembly = params.perform_assembly
+    def reads = isAssembly ? null : file
+    def assembly = isAssembly ? file : null
+    return [meta, reads, assembly]
+}
+
+// Combine input with ResFinder database (ensuring no empty list errors)
+ch_resfinder_input = ch_resfinder_input
+    .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+    .map { meta, reads, assembly, db -> 
+        return [meta, reads ?: [], assembly ?: [], db, []] 
+    }
+
+// Run ResFinder
+RESFINDER_RUN(ch_resfinder_input)
+    // Mix versions and outputs into global channels
+    ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+    
+    // Capture all ResFinder outputs
+    ch_resfinder = RESFINDER_RUN.out.all_outputs
+}
+/*
+    if (params.run_resfinder) {
+    log.info "Running ResFinder"
+
+    // Prepare input channel for both FASTA and FASTQ cases
+    ch_resfinder_input = ch_final_polished_assembly
+        .map { meta, file -> 
+            def isFastq = file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
+            def fastq = isFastq ? [file] : [] // Ensure fastq is a list (even for single-end reads)
+            def fasta = isFastq ? [] : file   // Use only one input type
+            [meta, fastq, fasta]
+        }
+        .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+        .map { meta, fastq, fasta, db -> 
+            if (!fastq && !fasta) {
+                error "No valid input provided for ResFinder: Please provide either FASTQ (long reads) or a FASTA assembly."
+            }
+            if (fastq && fasta) {
+                error "Both FASTQ and FASTA inputs detected. Please provide only one input type."
+            }
+            return [meta, fastq, fasta, db, []]  // Empty list for additional args
+        }
+
+    // Run ResFinder with the modified input channel
+    RESFINDER_RUN(ch_resfinder_input)
+
+    // Mix versions and outputs into global channels
+    ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+    
+    // Capture all ResFinder outputs
+    ch_resfinder = RESFINDER_RUN.out.all_outputs
+}
+*/
+
+
+
+
+/*
     if (params.run_resfinder) {
     log.info "Running ResFinder"
 
@@ -221,7 +297,7 @@ workflow METAAMR {
     // Capture all ResFinder outputs
     ch_resfinder = RESFINDER_RUN.out.all_outputs
 }
-    
+ */
     
     if (params.run_abricate) {
       
@@ -290,7 +366,63 @@ workflow METAAMR {
                 .ifEmpty([])
         )
     }    
-    VALIDATE_FASTA(ch_final_polished_assembly)
+    
+    // Run FASTA validation only if enabled
+    if (params.run_validate_fasta) {
+        log.info "Validating FASTA files"
+        VALIDATE_FASTA(ch_final_polished_assembly)
+        ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
+    } else {
+        log.info "Skipping FASTA validation"
+        ch_validated_assemblies = ch_final_polished_assembly
+    }
+
+
+
+    if (params.run_plasmidfinder) {
+        log.info "Running PlasmidFinder"
+
+    // Combine validated assemblies (or raw assemblies if validation is skipped) with PlasmidFinder database
+        ch_plasmidfinder_input = ch_validated_assemblies.combine(PREPARE_TOOL_DBS.out.plasmidfinder_db)
+
+    // Run PlasmidFinder
+        PLASMIDFINDER(ch_validated_assemblies, PREPARE_TOOL_DBS.out.plasmidfinder_db)
+
+    // Collect versions
+        ch_versions = ch_versions.mix(PLASMIDFINDER.out.versions)
+
+    // Add PlasmidFinder results to MultiQC if required
+        ch_multiqc_files = ch_multiqc_files.mix(
+            PLASMIDFINDER.out.tsv.collect { it[1] }.ifEmpty([])
+        )
+    }
+
+// Run PlasClass
+    if (params.run_plasclass) {
+        log.info "Running PlasClass"
+
+    // Step 1: Run PlasClass
+        PLASCLASS(ch_validated_assemblies)
+
+    // Step 2: Post-process PlasClass outputs
+        PLASCLASS_POSTPROCESS(PLASCLASS.out.report)
+
+    // Combine versions for tracking
+        ch_versions = ch_versions.mix(PLASCLASS.out.versions)
+        ch_versions = ch_versions.mix(PLASCLASS_POSTPROCESS.out.versions)
+
+    // Step 3: Collect results for MultiQC (optional)
+        ch_multiqc_files = ch_multiqc_files.mix(
+            PLASCLASS_POSTPROCESS.out.classified.collect { it[1] }.ifEmpty([])
+        )
+    }
+    
+    
+    
+    
+    
+    
+    /*VALIDATE_FASTA(ch_final_polished_assembly)
     ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
 
     if (params.run_plasmidfinder) {
@@ -332,7 +464,7 @@ workflow METAAMR {
     // Step 3: Collect results for MultiQC (optional)
         ch_multiqc_files = ch_multiqc_files.mix(PLASCLASS_POSTPROCESS.out.classified.collect { it[1] }.ifEmpty([]))
     }
-    
+    */
 
         
      // Collect results from AMR tools
