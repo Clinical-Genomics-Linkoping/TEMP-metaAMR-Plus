@@ -43,6 +43,26 @@
                 }
             }
         },
+
+        "process_options": {
+            "title": "Process options",
+            "type": "object",
+            "description": "Nextflow process-specific options",
+            "properties": {
+                "process": {
+                    "type": "object",
+                    "description": "Nextflow process options",
+                    "properties": {
+                        "cache": {
+                            "type": "string",
+                            "default": "deep",
+                           "description": "Caching mode for processes"
+                        }
+                    }
+                }
+            }
+        },
+
         "reference_genome_options": {
             "title": "Reference genome options",
             "type": "object",
@@ -79,6 +99,338 @@
                     "fa_icon": "fas fa-ban",
                     "hidden": true,
                     "default": "s3://ngi-igenomes/igenomes/"
+                }
+            }
+        },
+        
+        "read_processing_options": {
+            "title": "Read processing options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Options for read processing and quality control",
+            "properties": {
+                "filtlong_minlength": {
+                    "type": "integer",
+                    "default": 1000,
+                    "description": "Minimum length of reads to keep"
+                },
+                "filtlong_keeppercent": {
+                   "type": "integer",
+                    "default": 80,
+                    "description": "Percent of the best reads to keep"
+                },
+                "filtlong_targetbases": {
+                    "type": "integer",
+                    "default": 200000000,
+                    "description": "Target number of bases to keep"
+                },
+                "save_filtered_reads": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save the filtered long reads"
+                },
+                "validate_params": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Validate parameters against the schema at runtime"
+                },
+                "skip_trim": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip read trimming step"
+                }
+            }
+        },
+
+        "host_removal_options": {
+            "title": "Host removal options",
+            "type": "object",
+            "fa_icon": "fas fa-filter",
+            "description": "Options for host sequence removal",
+            "properties": {
+                "reference": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to reference genome for host removal"
+                },
+                "perform_hostremoval": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Perform host sequence removal"
+                },
+                "hostremoval_index": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to pre-built host removal index"
+                },
+                "hostremoval_reference": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to host reference genome for removal"
+                },
+               "save_hostremoval_index": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save the host removal index"
+                },
+                "save_hostremoval_bam": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save the BAM file from host removal"
+                },
+                "save_hostremoval_unmapped": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save unmapped reads after host removal"
+                },
+                "save_analysis_ready_fastqs": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save analysis-ready FASTQs after host removal"
+                }
+            }
+        },
+        
+        
+        "assembly_options": {
+            "title": "Assembly options",
+            "type": "object",
+            "fa_icon": "fas fa-puzzle-piece",
+            "description": "Options for genome assembly",
+            "properties": {
+                "perform_assembly": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Perform genome assembly"
+                },
+                "perform_polish_assembly": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Perform assembly polishing"
+                },
+                "use_second_polish": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use second round of polishing (set to false to use only the first round)"
+                }
+            }
+        },
+
+        "database_options": {
+            "title": "Database options",
+            "type": "object",
+            "description": "Options for database handling",
+            "properties": {
+                "save_untarred_databases": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Save untarred databases"
+                },
+                "save_databases": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save databases"
+                },
+                "resfinder_db": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to ResFinder database"
+                },
+                "download_resfinder_db": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Download ResFinder database"
+                },
+                "rgi_db": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to RGI database"
+                },
+                "download_rgi_db": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Download RGI database"
+                },
+                "amrfinderplus_db": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to AMRFinderPlus database"
+                },
+                "download_amrfinderplus_db": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Download AMRFinderPlus database"
+                },
+                "abricate_db": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to Abricate database"
+                },
+                "plasmidfinder_db": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to PlasmidFinder database"
+                },
+                "download_plasmidfinder_db": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Download PlasmidFinder database"
+                }
+            }
+        },
+
+        "tool_execution_options": {
+            "title": "Tool execution options",
+            "type": "object",
+            "fa_icon": "fas fa-tools",
+            "description": "Options for executing various analysis tools",
+            "properties": {
+                "run_resfinder": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run ResFinder for antimicrobial resistance gene detection"
+                },
+          
+                "resfinder_args": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Additional arguments for ResFinder"
+                },
+                "resfinder_point_mutations": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include point mutations in ResFinder analysis"
+                },
+                "run_rgi": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run RGI (Resistance Gene Identifier)"
+                },
+                "rgi_min_coverage": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "Minimum coverage for RGI"
+                },
+                "rgi_min_identity": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "Minimum identity for RGI"
+                },
+                "run_amrfinderplus": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run AMRFinderPlus"
+                },
+                "amrfinderplus_args": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Additional arguments for AMRFinderPlus"
+                },
+                "amrfinderplus_version": {
+                    "type": "string",
+                    "default": "unknown",
+                    "description": "Version of AMRFinderPlus to use"
+                },
+                "run_abricate": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run Abricate"
+                },
+                "arg_abricate_db": {
+                    "type": "string",
+                    "default": "vfdb",
+                    "description": "Database to use with Abricate"
+                },
+                "abricate_minid": {
+                    "type": "integer",
+                    "default": 80,
+                    "description": "Minimum identity percentage for Abricate"
+                },
+                "abricate_mincov": {
+                    "type": "integer",
+                    "default": 80,
+                    "description": "Minimum coverage percentage for Abricate"
+                },
+                "run_validate_fasta": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run FASTA validation"
+                },
+                "run_plasmidfinder": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run PlasmidFinder"
+                },
+                "plasmidfinder_args": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Additional arguments for PlasmidFinder"
+                },
+                "run_plasclass": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run PlasClass"
+                },
+                "plasclass_options": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Additional options for PlasClass"
+                },
+                "plasclass_threshold": {
+                    "type": "number",
+                    "default": 0.9,
+                    "description": "Threshold for PlasClass"
+                },
+                "run_hamronization": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run Hamronization"
+                },
+                "hamronization_tools": {
+                    "type": "array",
+                    "default": ["abricate", "amrfinderplus", "rgi"],
+                    "description": "Tools to include in Hamronization"
+                },
+                "arg_hamronization_format": {
+                    "type": "string",
+                    "default": "tsv",
+                    "description": "Output format for Hamronization"
+                },
+                "arg_hamronization_summarizeformat": {
+                    "type": "string",
+                    "default": "tsv",
+                    "description": "Summary format for Hamronization"
+                },
+                "run_hamronization_summarize": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run Hamronization summarize"
+                },
+                "abricate_version": {
+                    "type": "string",
+                    "default": "unknown",
+                    "description": "Version of Abricate"
+                },
+                "abricate_db_version": {
+                    "type": "string",
+                    "default": "unknown",
+                    "description": "Version of Abricate database"
+                },
+                
+                "amrfinderplus_db_version": {
+                    "type": "string",
+                    "default": "unknown",
+                    "description": "Version of AMRFinderPlus database"
+                },
+                "rgi_version": {
+                    "type": "string",
+                    "default": "unknown",
+                    "description": "Version of RGI"
+                },
+                "card_version": {
+                    "type": "string",
+                    "default": "unknown",
+                    "description": "Version of CARD database"
                 }
             }
         },
@@ -249,16 +601,27 @@
                     "type": "boolean",
                     "description": "Run Kaiju for taxonomic profiling",
                     "fa_icon": "fas fa-play",
-                    "default": false
+                    "default": true
                 },
                 "run_centrifuge": {
                     "type": "boolean",
                     "description": "Run Centrifuge for taxonomic profiling",
                     "fa_icon": "fas fa-play",
+                    "default": true
+                },
+                "save_centrifuge_unclassified": {
+                    "type": "boolean",
+                    "description": "Save unclassified reads from Centrifuge",
+                    "fa_icon": "fas fa-save",
                     "default": false
-                
+                },
+                "save_centrifuge_classified": {
+                    "type": "boolean",
+                    "description": "Save classified reads from Centrifuge",
+                    "fa_icon": "fas fa-save",
+                    "default": true
                 }
-            }
+            }   
         }
     },
     "allOf": [
@@ -276,6 +639,25 @@
         },
         {
             "$ref": "#/$defs/profiling_options"
-        }
+        },
+        {
+            "$ref": "#/$defs/read_processing_options"
+        },
+        {
+            "$ref": "#/$defs/host_removal_options"
+        },
+        {
+            "$ref": "#/$defs/assembly_options"
+        },
+        {
+            "$ref": "#/$defs/tool_execution_options"
+        },
+        {
+            "$ref": "#/$defs/database_options"
+        },
+        {
+            "$ref": "#/$defs/process_options"
+        }  
+        
     ]
 }

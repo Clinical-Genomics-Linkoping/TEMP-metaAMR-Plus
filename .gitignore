@@ -12,3 +12,5 @@ results_test/
 *.bam
 *.mmi
 MetaAMR-cleanup/
+samplesheet.csv
+ss.csv

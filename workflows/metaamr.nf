@@ -90,7 +90,7 @@ include { VALIDATE_FASTA } from '../modules/local/validate_fasta'
 include { PLASCLASS } from '../modules/local/plasclass'
 include { PLASCLASS_POSTPROCESS } from '../modules/local/plasclass_postprocess.nf'
 include { PROFILING } from '../subworkflows/local/PROFILING'
-include { SUMMARY } from '../subworkflows/local/summary'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -198,107 +198,77 @@ workflow METAAMR {
     ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
 
 
-
-
-   if (params.run_resfinder) {
+    
+/*
+    if (params.run_resfinder) {
     log.info "Running ResFinder"
 
-    // Determine if we are using reads (FASTQ) or an assembly (FASTA)
-ch_resfinder_input = params.perform_assembly 
-    ? (params.perform_polish_assembly 
-        ? (params.use_second_polish 
-            ? ch_second_polished_assembly 
-            : ch_first_polished_assembly)
-        : ch_assembled_contigs)
-    : PORECHOP_PORECHOP.out.reads
+    // Step 1: Choose the correct input based on whether we use reads (FASTQ) or assembly (FASTA)
+    ch_resfinder_input = params.perform_assembly 
+        ? (params.perform_polish_assembly 
+            ? (params.use_second_polish 
+                ? ch_second_polished_assembly 
+                : ch_first_polished_assembly)
+            : ch_final_polished_assembly)  // 🔹 Restore old assembly logic!
+        : PORECHOP_PORECHOP.out.reads
 
-// Ensure correct input structure (fixing empty list issue)
-ch_resfinder_input = ch_resfinder_input.map { meta, file -> 
-    def isAssembly = params.perform_assembly
-    def reads = isAssembly ? null : file
-    def assembly = isAssembly ? file : null
-    return [meta, reads, assembly]
-}
+    // Step 2: Ensure proper FASTA and FASTQ handling (NO decompression here!)
+    ch_resfinder_input = ch_resfinder_input.map { meta, file -> 
+        def reads = params.perform_assembly ? [] : file
+        def assembly = params.perform_assembly ? file : []
 
-// Combine input with ResFinder database (ensuring no empty list errors)
-ch_resfinder_input = ch_resfinder_input
-    .combine(PREPARE_TOOL_DBS.out.resfinder_db)
-    .map { meta, reads, assembly, db -> 
-        return [meta, reads ?: [], assembly ?: [], db, []] 
+        return [meta, reads, assembly]
     }
 
-// Run ResFinder
-RESFINDER_RUN(ch_resfinder_input)
-    // Mix versions and outputs into global channels
-    ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-    
-    // Capture all ResFinder outputs
-    ch_resfinder = RESFINDER_RUN.out.all_outputs
-}
-/*
-    if (params.run_resfinder) {
-    log.info "Running ResFinder"
-
-    // Prepare input channel for both FASTA and FASTQ cases
-    ch_resfinder_input = ch_final_polished_assembly
-        .map { meta, file -> 
-            def isFastq = file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
-            def fastq = isFastq ? [file] : [] // Ensure fastq is a list (even for single-end reads)
-            def fasta = isFastq ? [] : file   // Use only one input type
-            [meta, fastq, fasta]
-        }
+    //  Step 3: Combine ResFinder input with database
+    ch_resfinder_input = ch_resfinder_input
         .combine(PREPARE_TOOL_DBS.out.resfinder_db)
-        .map { meta, fastq, fasta, db -> 
-            if (!fastq && !fasta) {
-                error "No valid input provided for ResFinder: Please provide either FASTQ (long reads) or a FASTA assembly."
-            }
-            if (fastq && fasta) {
-                error "Both FASTQ and FASTA inputs detected. Please provide only one input type."
-            }
-            return [meta, fastq, fasta, db, []]  // Empty list for additional args
+        .map { meta, reads, assembly, db -> 
+            return [meta, reads ?: [], assembly ?: [], db, []]  // Keep same argument structure
         }
 
-    // Run ResFinder with the modified input channel
+    //  Step 4: Run ResFinder
     RESFINDER_RUN(ch_resfinder_input)
 
-    // Mix versions and outputs into global channels
+    //  Step 5: Capture versions & outputs
     ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-    
-    // Capture all ResFinder outputs
     ch_resfinder = RESFINDER_RUN.out.all_outputs
 }
+    
 */
-
-
-
-
-/*
+    
     if (params.run_resfinder) {
     log.info "Running ResFinder"
 
-    // Prepare input channel for both FASTA and FASTQ cases
-    ch_resfinder_input = ch_final_polished_assembly
-        .map { meta, file -> 
-            def isFastq = file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
-            def fastq = isFastq ? file : []
-            def fasta = isFastq ? [] : file
-            [meta, fastq, fasta]
-        }
+    // 🔹 Use polished assembly if available, otherwise fallback
+    ch_resfinder_input = params.perform_polish_assembly ? ch_final_polished_assembly
+                         : params.perform_assembly ? ch_assembly
+                         : params.perform_hostremoval ? ch_hostremoved
+                         : ch_processed_reads  // Use processed reads if nothing else
+
+    // 🔹 Ensure correct format handling (FASTQ vs. FASTA)
+    ch_resfinder_input = ch_resfinder_input.map { meta, file -> 
+        def isFastq = file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
+        def fastq = isFastq ? [file] : []
+        def fasta = isFastq ? [] : [file]
+        return [meta, fastq, fasta]
+    }
+
+    // 🔹 Combine with ResFinder database
+    ch_resfinder_input = ch_resfinder_input
         .combine(PREPARE_TOOL_DBS.out.resfinder_db)
         .map { meta, fastq, fasta, db -> 
-            [ meta, fastq, fasta, db, [] ]  // Added empty list for args
+            return [meta, fastq, fasta, db, []]  // Maintain correct argument structure
         }
 
+    // 🔹 Run ResFinder
     RESFINDER_RUN(ch_resfinder_input)
 
-    // Mix versions and outputs into global channels
+    // 🔹 Capture versions & outputs
     ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-    
-    // Capture all ResFinder outputs
     ch_resfinder = RESFINDER_RUN.out.all_outputs
 }
- */
-    
+
     if (params.run_abricate) {
       
         log.info "Running Abricate"
@@ -417,55 +387,6 @@ RESFINDER_RUN(ch_resfinder_input)
         )
     }
     
-    
-    
-    
-    
-    
-    /*VALIDATE_FASTA(ch_final_polished_assembly)
-    ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
-
-    if (params.run_plasmidfinder) {
-        log.info "Running PlasmidFinder"
-
-   // Combine validated assemblies with PlasmidFinder database
-        ch_plasmidfinder_input = VALIDATE_FASTA.out.validated_fasta.combine(PREPARE_TOOL_DBS.out.plasmidfinder_db)
-
-        // Run PlasmidFinder
-        PLASMIDFINDER (
-            VALIDATE_FASTA.out.validated_fasta,
-            PREPARE_TOOL_DBS.out.plasmidfinder_db
-        )
-
-        // Collect versions
-        ch_versions = ch_versions.mix(PLASMIDFINDER.out.versions)
-
-        // Add PlasmidFinder results to MultiQC if required
-        ch_multiqc_files = ch_multiqc_files.mix(
-            PLASMIDFINDER.out.tsv.collect { it[1] }.ifEmpty([])
-        )
-    }
- 
-    // Run PlasClass
-    if (params.run_plasclass) {
-        
-        log.info "Running PlasClass"
-
-    // Step 1: Run PlasClass
-        PLASCLASS(VALIDATE_FASTA.out.validated_fasta)
-
-    // Step 2: Post-process PlasClass outputs
-        PLASCLASS_POSTPROCESS(PLASCLASS.out.report)
-
-    // Combine versions for tracking
-        ch_versions = ch_versions.mix(PLASCLASS.out.versions)
-        ch_versions = ch_versions.mix(PLASCLASS_POSTPROCESS.out.versions)
-
-    // Step 3: Collect results for MultiQC (optional)
-        ch_multiqc_files = ch_multiqc_files.mix(PLASCLASS_POSTPROCESS.out.classified.collect { it[1] }.ifEmpty([]))
-    }
-    */
-
         
      // Collect results from AMR tools
     ch_abricate_results = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()

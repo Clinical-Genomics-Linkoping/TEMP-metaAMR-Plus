@@ -1,6 +1,12 @@
 process RACON {
     tag "$meta.id"
-    label 'process_high'
+    //label 'process_high'
+    //memory '16GB'
+    //cpus 8
+    //maxForks 3
+    errorStrategy { task.attempt <= 3 ? 'retry' : 'finish' }
+    maxRetries 3
+
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

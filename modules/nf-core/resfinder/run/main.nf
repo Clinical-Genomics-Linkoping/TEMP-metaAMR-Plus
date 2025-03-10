@@ -80,16 +80,25 @@ process RESFINDER_RUN {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def input_cmd = reads ? "-ifq ${reads}" : "-ifa ${assembly}"
+
+    // Ensure correct input handling: Decompress assembly if needed
+    def decompressed_assembly = assembly.toString().endsWith('.gz') ? "decompressed_${meta.id}.fasta" : assembly
+    def decompress_cmd = assembly.toString().endsWith('.gz') ? "gunzip -c ${assembly} > ${decompressed_assembly}" : ""
+
+    // Define the correct input command for ResFinder
+    def input_cmd = reads ? "-ifq ${reads}" : "-ifa ${decompressed_assembly}"
     def extra_args = args ?: ""
 
     """
+    # Decompress assembly if needed
+    ${decompress_cmd}
+
     # Run ResFinder
     run_resfinder.py \\
         -acq \\
         ${input_cmd} \\
-        -db_res $db \\
-        -db_point $db \\
+        -db_res ${db} \\
+        -db_point ${db} \\
         -o ${meta.id} \\
         ${extra_args}
 
