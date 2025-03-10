@@ -2,7 +2,7 @@ process MINIMAP2_ALIGN {
     tag "$meta.id"
     label 'process_high'
 
-    // Note: the versions here need to match the versions used in the mulled container below and minimap2/index
+    //Note: the versions here need to match the versions used in the mulled container below and minimap2/index
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/mulled-v2-66534bcbb7031a148b13e2ad42583020b9cd25c4:3161f532a5ea6f1dec9be5667c9efc2afdac6104-0' :

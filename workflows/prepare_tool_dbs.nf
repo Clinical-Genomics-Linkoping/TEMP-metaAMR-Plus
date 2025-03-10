@@ -33,15 +33,7 @@ workflow PREPARE_TOOL_DBS {
     ch_amrfinderplus_db.view { "AMRFinderPlus tool: $it" }
     ch_plasmidfinder_db.view { "PlasmidFinder tool: $it" }
 
-    /*// Process ResFinder DB
-    ch_resfinder_db_downloaded = ch_resfinder_db.branch {
-        to_download: it == 'resfinder'
-        ready: true
-    }
-    ch_resfinder_db_downloaded.to_download | RESFINDER_DB_DOWNLOAD
-    ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(RESFINDER_DB_DOWNLOAD.out.db).first()
-*/
-     // Process ResFinder DB with indexing
+    
     
     // Process ResFinder DB with indexing
     ch_resfinder_db_downloaded = ch_resfinder_db.branch {
@@ -50,11 +42,11 @@ workflow PREPARE_TOOL_DBS {
     }
     ch_resfinder_db_downloaded.to_download | RESFINDER_DB_DOWNLOAD
 
-// Automatically run indexing after database download
+    // Automatically run indexing after database download
     ch_indexed_resfinder_db = RESFINDER_INDEX(RESFINDER_DB_DOWNLOAD.out.db)
         .map { db_files -> file(db_files[0]).parent }
 
-// Ensure ResFinder gets the indexed DB
+    // Ensure ResFinder gets the indexed DB
     ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(ch_indexed_resfinder_db).first()
 
 

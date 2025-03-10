@@ -199,44 +199,6 @@ workflow METAAMR {
 
 
     
-/*
-    if (params.run_resfinder) {
-    log.info "Running ResFinder"
-
-    // Step 1: Choose the correct input based on whether we use reads (FASTQ) or assembly (FASTA)
-    ch_resfinder_input = params.perform_assembly 
-        ? (params.perform_polish_assembly 
-            ? (params.use_second_polish 
-                ? ch_second_polished_assembly 
-                : ch_first_polished_assembly)
-            : ch_final_polished_assembly)  // 🔹 Restore old assembly logic!
-        : PORECHOP_PORECHOP.out.reads
-
-    // Step 2: Ensure proper FASTA and FASTQ handling (NO decompression here!)
-    ch_resfinder_input = ch_resfinder_input.map { meta, file -> 
-        def reads = params.perform_assembly ? [] : file
-        def assembly = params.perform_assembly ? file : []
-
-        return [meta, reads, assembly]
-    }
-
-    //  Step 3: Combine ResFinder input with database
-    ch_resfinder_input = ch_resfinder_input
-        .combine(PREPARE_TOOL_DBS.out.resfinder_db)
-        .map { meta, reads, assembly, db -> 
-            return [meta, reads ?: [], assembly ?: [], db, []]  // Keep same argument structure
-        }
-
-    //  Step 4: Run ResFinder
-    RESFINDER_RUN(ch_resfinder_input)
-
-    //  Step 5: Capture versions & outputs
-    ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-    ch_resfinder = RESFINDER_RUN.out.all_outputs
-}
-    
-*/
-    
     if (params.run_resfinder) {
     log.info "Running ResFinder"
 
@@ -367,7 +329,7 @@ workflow METAAMR {
         )
     }
 
-// Run PlasClass
+    // Run PlasClass
     if (params.run_plasclass) {
         log.info "Running PlasClass"
 
