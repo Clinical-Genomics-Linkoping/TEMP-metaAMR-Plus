@@ -19,7 +19,9 @@
 
 ## Introduction
 
-**nf-core/metaamr** is a bioinformatics pipeline that ...
+nf-core/metaamr is a bioinformatics pipeline designed for analyzing long-read Nanopore metagenomic data. It detects antimicrobial resistance (AMR) genes, identifies plasmids, and performs taxonomic classification using multiple tools and reference databases. The pipeline processes sequencing data efficiently and generates standardized output tables, making it easier to compare results across different tools and datasets.
+
+
 
 <!-- TODO nf-core:
    Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
@@ -32,7 +34,29 @@
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
 1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+2. Performs  read pre-processing
+     Adapter clipping and merging ( porechop)
+     Low complexity and quality filtering (Filtlong)
+     Host-read removal ( Minimap2)
+3. Generates statistics for host-read removal using Samtools.
+4. Performs optional genome assembly with Flye and assesses assembly quality using QUAST.
+5. Optionally polishes the assembly using Racon.
+6. Optionally downloads databases for AMR detection tools and PlasmidFinder if not provided by the user.
+7. Performs AMR detection on assembled data using one or more of:
+     ResFinder
+     AMRFinderPlus
+     CARD-RGI
+     Abricate 
+   and ResFinder on unassembled reads.
+8. Optionally performs hAMRonization to generate a comprehensive report integrating results from multiple AMR detection tools.
+9. Performs plasmid detection assembled data using:
+     PlasmidFinder
+     PlasClass
+10. Performs taxonomic classification using Centrifuge and Kaiju.
+11. Generates visualizations for Centrifuge and Kaiju results using Krona.
+12. Presents quality control and summary statistics for preprocessing, assembly, taxonomic classification, host-read removal, and AMR detection using ResFinder, AMRFinderPlus, CARD-RGI, and Abricate (MultiQC).
+
+
 
 ## Usage
 
@@ -40,22 +64,45 @@
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with `-profile test` before running the workflow on actual data.
 
 <!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
+     Explain what rows and columns represent. For instance (please edit as appropriate):-->
 
 First, prepare a samplesheet with your input data that looks as follows:
 
-`samplesheet.csv`:
+samplesheet.csv:
 
-```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-```
+sample,fastq_1
+sg17,sample17.fastq.gz
+sg18,sample18.fastq.gz
+sg19,sample19.fastq.gz
 
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
+Each row represents a fastq file (single-end).
 
--->
+Additionally, you will need a database sheet that looks as follows:
+
+samplesheet.csv:
+tool,db_name,db_params,db_path
+kaiju,kaiju_db,,/<path>/<to>/kaiju_db
+centrifuge,centrifuge_db,,/<path>/<to>/centrifuge_database
+
+The db_path column should point to directories or .tar.gz archives containing the databases required for the selected tools. For Kaiju and Centrifuge, pre-existing databases must be provided. For other tools, you can either provide the database path, or the pipeline will automatically generate the required database if not supplied.
+Note: Abricate and PlasClass come with built-in databases, so no external database input is required for them.
+
+
+
+
 
 Now, you can run the pipeline using:
+
+nextflow run ./main.nf \
+   -profile docker \
+   --input samplesheet.csv \
+   --databases database.csv \
+   --outdir results \
+   --perform_assembly \
+   --perform_polish_assembly \
+   --run_resfinder \
+   --download_resfinder_db \
+  
 
 <!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
 
@@ -81,7 +128,7 @@ For more details about the output files and reports, please refer to the
 
 nf-core/metaamr was originally written by Leila Nasirzadeh.
 
-We thank the following people for their extensive assistance in the development of this pipeline:
+We thank Jyotirmoy Das for his extensive assistance in the development of this pipeline:
 
 <!-- TODO nf-core: If applicable, make list of people who have also contributed -->
 

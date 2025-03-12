@@ -1,63 +1,105 @@
 # nf-core/metaamr: Usage
 
-## :warning: Please read this documentation on the nf-core website: [https://nf-co.re/metaamr/usage](https://nf-co.re/metaamr/usage)
+## ⚠️ **Warning:** Please read this documentation on the nf-core website: [https://nf-co.re/metaamr/usage](https://nf-co.re/metaamr/usage)
 
 > _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
 
 ## Introduction
+nf-core/metaamr is a bioinformatics pipeline for the detection and characterization of antimicrobial resistance (AMR) genes, plasmids, and taxonomic classification in long-read Nanopore metagenomic data. It enables highly parallelized AMR detection and taxonomic analysis across multiple tools and databases simultaneously. The pipeline efficiently processes sequencing data, generating standardized output tables to facilitate direct comparison of results across different tools and reference databases.
+
+## General Usage
+
+To run nf-core/metaamr, you need at least two input files:
+
+	1.	A sequencing read samplesheet
+	2.	A database 
+
+Both files contain metadata and paths to sequencing data and reference databases.If either of these is omitted, the tool will not be executed.
+
+Each step and tool in MetaAMR is optional and must be explicitly enabled. To run a specific tool:
+
+  - For tools that require a database, you can either provide your own in the <database>.csv file or let MetaAMR download it automatically using the appropriate --download_<tool>_db flag
+	
+  - Supply the appropriate --run_<tool> flag in your command.
+
+
+The following tools can only be run on assembled data:
+- AMRFinderPlus
+- Abricate
+- RGI 
+- PlasmidFinder 
+- PlasClass. 
+
+In contrast, ResFinder, Kaiju, and Centrifuge can be run on both assembled and unassembled (raw read) data.
+
+For details on how to prepare input samplesheets and databases, as well as how to run the pipeline, please refer to the documentation. See the parameters section for additional pipeline options.
 
 <!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+nf-core/MetaAMR can accept as input raw long-read FASTQ files (Oxford Nanopore)
+You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 2 columns, and a header row as shown in the examples below:
 
-```bash
---input '[path to samplesheet file]'
-```
 
-### Multiple runs of the same sample
+This samplesheet is then specified on the command line as follows:
+--input '[path to samplesheet file]' 
 
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
-
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
-```
 
 ### Full samplesheet
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+ There is a strict requirement for the first 2 columns to match those defined in the table below.
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+A final samplesheet file consisting of single-end data may look something like the one below. This is for 3 samples.
 
 ```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+sample,fastq_1
+sg17,sample17_S4_L003_R1_001.fastq.gz,
+sg18,sample18_S5_L003_R1_001.fastq.gz,
+sg19,sample19_S6_L003_R1_001.fastq.gz,
 ```
 
 | Column    | Description                                                                                                                                                                            |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `sample`  | Custom sample name. This entry must be unique. Spaces in sample names should converted to underscores (`_`). |
+| `fastq_1` | Full path to FastQ file for Nanopore long reads. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
+
+### Full database sheet
+nf-core/metaamr supports running multiple AMR detection, plasmid detection, and taxonomic classification tools in parallel against various databases.
+
+### Database Handling
+
+- Kaiju and Centrifuge: A database must be provided in the database.csv
+- Abricate and PlasClass: These tools come with built-in databases, so no external database input is required.
+- Other tools (ResFinder, AMRFinderPlus, CARD-RGI and plasmidfinder): You can either provide a database or allow the pipeline to automatically download the required database using options like: --download_resfinder_db
+
+An example database sheet can look as follows, where 6 tools are being used
+```csv title="database.csv"
+tool,db_name,db_params,db_path
+kaiju,kaiju_db,,/<path>/<to>/kaiju_db
+centrifuge,centrifuge_db,,/<path>/<to>/centrifuge_database
+resfinder,custom_resfinder_db,,/<path>/<to>/resfinder_db/
+amrfinderplus,amrfinder_db,,/<path>/<to>/amrfinderplus_db/
+cardrgi,card_db,,/<path>/<to>/card_db/
+plasmidfinder,plasmidfinder_db,,/<path>/<to>/plasmidfinder_db
+```
+
+| Column    | Description |
+|-----------|------------|
+| **tool**      | MetaAMR tool (supported by nf-core/metaamr) that the database has been indexed for **[required]**. |
+| **db_name**   | A unique name per tool for the particular database **[required]**. Names must be unique across tools, even if reusing the same database. |
+| **db_params** | Any parameters for the MetaAMR to use  against this specific database. Can be empty to use default parameters.  |
+| **db_path**   | Path to the database. A **directory** containing database index files. **[required]** |
+
 
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run nf-core/metaamr --input ./samplesheet.csv --outdir ./results --genome GRCh37 -profile docker
+nextflow run nf-core/metaamr --input samplesheet.csv --databases databases.csv --outdir <OUTDIR>  --run_<TOOL1> --run_<TOOL2> -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
@@ -75,16 +117,15 @@ If you wish to repeatedly use the same parameters for multiple runs, rather than
 
 Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <file>`.
 
-:::warning
+⚠️ **Warning:**
+
 Do not use `-c <file>` to specify parameters as this will result in errors. Custom config files specified with `-c` must only be used for [tuning process resource specifications](https://nf-co.re/docs/usage/configuration#tuning-workflow-resources), other infrastructural tweaks (such as output directories), or module arguments (args).
-:::
 
 The above pipeline run specified with a params file in yaml format:
 
 ```bash
 nextflow run nf-core/metaamr -profile docker -params-file params.yaml
 ```
-
 with:
 
 ```yaml title="params.yaml"
@@ -103,6 +144,97 @@ When you run the above command, Nextflow automatically pulls the pipeline code f
 ```bash
 nextflow pull nf-core/metaamr
 ```
+## Sequencing quality control
+FastQC gives general quality metrics about your reads. It provides information about the quality score distribution across your reads, per base sequence content (%A/T/G/C), adapter contamination and overrepresented sequences.
+
+## Preprocessing Steps
+nf-core/metaamr offers three main preprocessing steps for preprocessing raw sequencing reads:
+
+- Read processing: adapter clipping.
+- Complexity filtering: removal of low-sequence complexity reads.
+- Host read-removal: removal of reads aligning to reference genome(s) of a host.
+
+You can save the 'final' reads from these steps with --save_analysis_ready_fastqs .
+
+### Read Processing
+For accurate antimicrobial resistance (AMR) gene detection and taxonomic classification, it is highly recommended to preprocess raw sequencing reads to remove sequencing artifacts that may lead to false-positive identifications.
+Porechop is used for adapter trimming and read merging. It removes sequencing adapters and improves downstream analysis accuracy.
+
+
+### Read Quality Filtering
+Removing low-quality reads: Ensures only high-quality reads are used in AMR detection, plasmid identification, and taxonomic classification.
+Filtering low-quality reads is performed using Filtlong.
+
+### Host-Read Removal
+
+In MetaAMR, host-read removal can be enabled using the --perform_hostremoval flag. This step eliminates host-derived reads from long-read Oxford Nanopore data, improving downstream AMR gene detection, plasmid identification, and taxonomic classification.
+
+Similar to quality filtering, host-read removal can reduce misclassifications by eliminating non-microbial sequences. Since the host genome is already known, removing its reads before computationally intensive classification and AMR detection can improve efficiency. 
+
+Host reads are identified using Minimap2, which aligns sequencing reads against a provided reference genome. Unaligned reads are retained for further AMR and taxonomic analysis.
+
+Providing a Reference Genome
+- A FASTA-formatted host genome must be provided using --hostremoval_reference.
+- A Minimap2 pre-indexed .mmi file can be supplied using --hostremoval_index to speed up processing.
+- If an index is not provided, MetaAMR will generate one automatically.
+
+Multiple Host Sequences:
+
+If you need to remove multiple sequences, you can concatenate multiple FASTA files into a single reference file before running host removal.
+
+### Assembly and Quality Assessment
+nf-core/metaamr supports optional genome assembly and assembly polishing to improve the accuracy and completeness of assembled contigs before downstream AMR and plasmid detection.
+- Genome Assembly with Flye: If enabled, MetaAMR assembles long-read Nanopore sequencing data using Flye, a tool designed for de novo assembly of long reads.
+
+- Assembly Quality Assessment with QUAST: To evaluate the quality of the assembled genome, MetaAMR runs QUAST, which provides key assembly metrics such as contig length, N50, and genome completeness.
+
+- Assembly Polishing with Racon: If enabled, the assembled genome undergoes two rounds of polishing with Racon to improve consensus accuracy by correcting sequencing errors. This step enhances the quality of the assembled contigs, ensuring more reliable downstream analysis for AMR detection, plasmid identification, and taxonomic classification.
+
+### Antimicrobial Resistance (AMR) Detection
+
+nf-core/metaamr detects antimicrobial resistance (AMR) genes using multiple bioinformatics tools and reference databases. This allows for a comprehensive and comparative AMR analysis across different detection methods.
+- AMR Detection with ResFinder, AMRFinderPlus, CARD-RGI, and Abricate: These tools identify resistance genes from sequencing data, providing insights into potential antimicrobial resistance mechanisms.
+
+- Supports Both Assembly and Read-Based Approaches:
+ ResFinder can analyze both assembled genomes and raw reads.
+
+- AMRFinderPlus, CARD-RGI, and Abricate require assembled genomes for AMR detection.
+
+### Plasmid detection
+nf-core/metaamr detects plasmids using multiple bioinformatics tools, identifying plasmid-derived sequences within long-read Nanopore metagenomic data. Plasmids play a crucial role in horizontal gene transfer and are often associated with antimicrobial resistance (AMR) genes.
+
+Plasmid Detection with PlasmidFinder and PlasClass:
+- PlasmidFinder identifies known plasmid sequences by comparing assembled contigs against reference databases.
+- PlasClass classifies assembled contigs as plasmid-derived or chromosomal, helping distinguish plasmid-associated sequences.
+
+Assembly Requirement
+- Both PlasmidFinder and PlasClass require assembled genomes for plasmid identification and classification.
+- Raw sequencing reads cannot be directly analyzed by these tools; therefore, assembly must be performed before plasmid detection.
+
+### Taxonomic classification
+nf-core/metaamr performs taxonomic classification to identify and profile microbial communities within long-read Nanopore metagenomic data. This step provides crucial insights into the composition of metagenomic samples and the potential hosts of antimicrobial resistance (AMR) genes.
+Taxonomic Classification with Kaiju and Centrifuge:
+- Kaiju performs taxonomic classification by comparing sequences to protein-level databases, making it well-suited for analyzing highly fragmented or error-prone long reads.
+- Centrifuge classifies reads against nucleotide-level reference databases, offering a fast and memory-efficient approach for taxonomic identification.
+
+Assembly vs. Read-Based Classification
+- Kaiju and Centrifuge can process both assembled and raw sequencing reads, allowing flexibility in taxonomic classification.
+- Classification can be performed on raw reads to retain maximum sequencing data or on assembled contigs for a more refined taxonomic assignment.
+
+
+### Post Processing
+#### Visualization
+
+nf-core/metaamr supports generation of Krona interactive pie chart plots for the following compatible tools.
+
+- Centrifuge
+- Kaiju
+#### hAMRonization
+nf-core/metaamr supports the generation of standardized AMR reports through hAMRonization, a framework designed to unify antimicrobial resistance (AMR) results across different tools. By harmonizing AMR gene predictions from multiple detection tools, MetaAMR ensures consistency and comparability of results, facilitating downstream analysis and interpretation.
+
+hAMRonization is an optional feature and will only be performed if more than one AMR detection tool is run in the pipeline. If enabled, it consolidates results from different tools into a standardized output, reducing inconsistencies and improving the interpretability of AMR findings.
+
+
 
 ### Reproducibility
 

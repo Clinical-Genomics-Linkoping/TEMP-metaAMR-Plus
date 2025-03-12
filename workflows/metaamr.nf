@@ -134,7 +134,7 @@ workflow METAAMR {
     // MODULE: Run PORECHOPS & FILTLONG
     //
     
-    if (!params.skip_trim) {
+    if (!params.perform_trim) {
         PORECHOP_PORECHOP(
             ch_samplesheet
         )
@@ -169,7 +169,7 @@ workflow METAAMR {
     /*
         SUBWORKFLOW: ASSEMBLY
     */
-    if ( params.perform_assembly ) {
+    if ( params.perform_assembly) {
         ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly   // Use Flye’s metagenomic assembly mode
         ch_versions = ch_versions.mix(META_ASSEMBLY.out.ch_versions)
     } else {
