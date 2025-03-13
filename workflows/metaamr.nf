@@ -134,23 +134,24 @@ workflow METAAMR {
     // MODULE: Run PORECHOPS & FILTLONG
     //
     
-    if (!params.perform_trim) {
-        PORECHOP_PORECHOP(
-            ch_samplesheet
-        )
-        ch_clipped_reads = PORECHOP_PORECHOP.out.reads
-            .map { meta, reads -> 
-                def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
-                [ meta + [single_end: true], porechopped_reads ] }
-            
-        ch_processed_reads = FILTLONG ( ch_clipped_reads.map { meta, reads -> [ meta, [], reads ] } ).reads
+    if (params.perform_trim) {
+    PORECHOP_PORECHOP(
+        ch_samplesheet
+    )
+    ch_clipped_reads = PORECHOP_PORECHOP.out.reads
+        .map { meta, reads -> 
+            def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
+            [ meta + [single_end: true], porechopped_reads ] }
+    
+    ch_processed_reads = FILTLONG ( ch_clipped_reads.map { meta, reads -> [ meta, [], reads ] } ).reads
 
-        ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
-        ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
-        ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
-        ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
-        
-    } 
+    ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
+    ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
+    ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
+    ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
+} else {
+    ch_processed_reads = ch_samplesheet
+}
     
     /*
         SUBWORKFLOW: HOST REMOVAL
@@ -169,13 +170,15 @@ workflow METAAMR {
     /*
         SUBWORKFLOW: ASSEMBLY
     */
+    
     if ( params.perform_assembly) {
         ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly   // Use Flye’s metagenomic assembly mode
         ch_versions = ch_versions.mix(META_ASSEMBLY.out.ch_versions)
     } else {
         ch_assembly = ch_hostremoved
     }
-    
+
+
     /*
         SUBWORKFLOW: POLISH_ASSEMBLY
     */ 
@@ -197,40 +200,42 @@ workflow METAAMR {
     
     ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
 
-
+    
     
     if (params.run_resfinder) {
     log.info "Running ResFinder"
 
-    // 🔹 Use polished assembly if available, otherwise fallback
+    // Use polished assembly if available, otherwise fallback
     ch_resfinder_input = params.perform_polish_assembly ? ch_final_polished_assembly
                          : params.perform_assembly ? ch_assembly
                          : params.perform_hostremoval ? ch_hostremoved
                          : ch_processed_reads  // Use processed reads if nothing else
 
-    // 🔹 Ensure correct format handling (FASTQ vs. FASTA)
-    ch_resfinder_input = ch_resfinder_input.map { meta, file -> 
-        def isFastq = file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
-        def fastq = isFastq ? [file] : []
-        def fasta = isFastq ? [] : [file]
+    // Ensure correct format handling (FASTQ vs. FASTA)
+    ch_resfinder_input = ch_resfinder_input.map { meta, files -> 
+        def isFastq = files.any { file ->
+            file.name.toLowerCase().endsWith('.fastq') || file.name.toLowerCase().endsWith('.fastq.gz')
+        }
+        def fastq = isFastq ? files : []
+        def fasta = isFastq ? [] : files
         return [meta, fastq, fasta]
     }
 
-    // 🔹 Combine with ResFinder database
+    // Combine with ResFinder database
     ch_resfinder_input = ch_resfinder_input
         .combine(PREPARE_TOOL_DBS.out.resfinder_db)
         .map { meta, fastq, fasta, db -> 
             return [meta, fastq, fasta, db, []]  // Maintain correct argument structure
         }
 
-    // 🔹 Run ResFinder
+    // Run ResFinder
     RESFINDER_RUN(ch_resfinder_input)
 
-    // 🔹 Capture versions & outputs
+    // Capture versions & outputs
     ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
     ch_resfinder = RESFINDER_RUN.out.all_outputs
 }
-
+    
     if (params.run_abricate) {
       
         log.info "Running Abricate"
