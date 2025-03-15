@@ -134,7 +134,7 @@
                     "default": true,
                     "description": "Validate parameters against the schema at runtime"
                 },
-                "skip_trim": {
+                "perform_trim": {
                     "type": "boolean",
                     "default": false,
                     "description": "Skip read trimming step"
@@ -351,11 +351,8 @@
                     "default": 80,
                     "description": "Minimum coverage percentage for Abricate"
                 },
-                "run_validate_fasta": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Run FASTA validation"
-                },
+
+                
                 "run_plasmidfinder": {
                     "type": "boolean",
                     "default": true,

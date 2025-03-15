@@ -178,12 +178,11 @@ workflow METAAMR {
         ch_assembly = ch_hostremoved
     }
 
-
     /*
         SUBWORKFLOW: POLISH_ASSEMBLY
     */ 
 
-    
+    /*
     if ( params.perform_polish_assembly ) {
         POLISH_ASSEMBLY(ch_hostremoved, ch_assembly)
         ch_polished_assembly_1 = POLISH_ASSEMBLY.out.polished_assembly_1
@@ -200,7 +199,38 @@ workflow METAAMR {
     
     ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
 
-    
+    */
+
+    if (params.perform_polish_assembly && params.perform_assembly) {
+    // Combine the reads and assembly channels
+    ch_polish_input = ch_hostremoved.join(ch_assembly)
+        .map { meta, reads, assembly -> 
+            // Ensure reads and assembly are single files, not lists
+            def read_file = reads instanceof List ? reads[0] : reads
+            def assembly_file = assembly instanceof List ? assembly[0] : assembly
+            [meta, read_file, assembly_file]
+        }
+
+    POLISH_ASSEMBLY(ch_polish_input)
+    ch_polished_assembly_1 = POLISH_ASSEMBLY.out.polished_assembly_1
+    ch_polished_assembly_2 = POLISH_ASSEMBLY.out.polished_assembly_2
+
+    // Use the second round by default, or choose based on the parameter
+    ch_final_polished_assembly = params.use_second_polish ? 
+        ch_polished_assembly_2 : ch_polished_assembly_1
+
+    ch_versions = ch_versions.mix(POLISH_ASSEMBLY.out.versions)
+} else {
+    ch_final_polished_assembly = ch_assembly
+}
+
+ch_assembly_for_arg = ch_final_polished_assembly.mix(ch_hostremoved)
+    .groupTuple()
+    .map { meta, assemblies -> 
+        def assembly = assemblies.find { it != null }
+        [meta, assembly ?: meta.reads] // Use assembly if available, otherwise use reads
+    }
+
     
     if (params.run_resfinder) {
     log.info "Running ResFinder"
@@ -304,8 +334,11 @@ workflow METAAMR {
         )
     }    
     
-    // Run FASTA validation only if enabled
-    if (params.run_validate_fasta) {
+    // Determine if FASTA validation is needed
+    def run_validate_fasta = params.run_plasmidfinder || params.run_plasclass
+
+    // Run FASTA validation only if PlasmidFinder or PlasClass is enabled
+    if (run_validate_fasta) {
         log.info "Validating FASTA files"
         VALIDATE_FASTA(ch_final_polished_assembly)
         ch_validated_assemblies = VALIDATE_FASTA.out.validated_fasta
@@ -313,7 +346,6 @@ workflow METAAMR {
         log.info "Skipping FASTA validation"
         ch_validated_assemblies = ch_final_polished_assembly
     }
-
 
 
     if (params.run_plasmidfinder) {
