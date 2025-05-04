@@ -1,0 +1,9 @@
+[2025-05-04 19:49:40,896] multiqc.config                                     [INFO   ]  Loading config settings from: multiqc_config.yml
+[2025-05-04 19:49:41,011] multiqc.core.version_check                         [WARNING]  MultiQC Version v1.28 now available!
+[2025-05-04 19:49:41,012] multiqc.core.file_search                           [INFO   ]  Search path: /mnt/projects/MetaAMR-PLUS/MetaAMR/work/cf/22ca22193c770ca4c3e16a7ac4867f
+[2025-05-04 19:49:41,078] multiqc.modules.custom_content.custom_content      [WARNING]  HTML plot type found with more than one dataset in nf-core-metaamr-methods-description
+[2025-05-04 19:49:41,078] multiqc.modules.custom_content.custom_content      [INFO   ]  nf-core-metaamr-methods-description: Found 1 sample (html)
+[2025-05-04 19:49:41,079] multiqc.modules.custom_content.custom_content      [WARNING]  HTML plot type found with more than one dataset in nf-core-metaamr-summary
+[2025-05-04 19:49:41,079] multiqc.modules.custom_content.custom_content      [INFO   ]  nf-core-metaamr-summary: Found 1 sample (html)
+[2025-05-04 19:49:41,082] multiqc.modules.fastqc.fastqc                      [INFO   ]  Found 1 reports
+[2025-05-04 19:49:41,201] multiqc.core.write_results                         [INFO   ]  Rendering plots. Export plots to formats png, svg, pdf is requested, so it might take a while. To disable plot export, set `export_plots: false` in config, or remove the `--export-plots` command line flag

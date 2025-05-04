@@ -1,0 +1,2 @@
+Sample	Unique Reads	Duplicate Reads
+sample_09_null_raw	173471.0	819.0

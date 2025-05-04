@@ -1,0 +1,7 @@
+Resistance gene	Identity	Alignment Length/Gene Length	Coverage	Position in reference	Contig	Position in contig	Phenotype	Accession no.
+aph(3')-III	100.00	795/795	100.0	1..795	contig_456 LN:i:8163 RC:i:63 XC:f:1.000000	6706..7500	Aminoglycoside resistance	M26832
+blaCTX-M-15	100.00	876/876	100.0	1..876	contig_1323 LN:i:72412 RC:i:316 XC:f:1.000000	33895..34770	Beta-lactam resistance Alternate name; UOE-1	AY044436
+qnrS1	100.00	657/657	100.0	1..657	contig_1323 LN:i:72412 RC:i:316 XC:f:1.000000	28598..29254	Quinolone resistance	AB187515
+tet(O)	99.74	1920/1920	100.0	1..1920	contig_1106 LN:i:30780 RC:i:84 XC:f:1.000000	2570..4489	Tetracycline resistance	M18896
+tet(Q)	99.41	1516/1926	78.40083073727934	244..1759	contig_228 LN:i:24965 RC:i:130 XC:f:0.980392	1..1510	Tetracycline resistance	L33696
+tet(W)	99.17	1920/1920	100.0	1..1920	contig_262 LN:i:46345 RC:i:119 XC:f:1.000000	13593..15512	Tetracycline resistance	AJ427422

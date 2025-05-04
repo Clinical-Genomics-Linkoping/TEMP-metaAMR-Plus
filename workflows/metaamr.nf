@@ -178,60 +178,24 @@ workflow METAAMR {
         ch_assembly = ch_hostremoved
     }
 
-    /*
-        SUBWORKFLOW: POLISH_ASSEMBLY
-    */ 
-
-    /*
-    if ( params.perform_polish_assembly ) {
-        POLISH_ASSEMBLY(ch_hostremoved, ch_assembly)
-        ch_polished_assembly_1 = POLISH_ASSEMBLY.out.polished_assembly_1
-        ch_polished_assembly_2 = POLISH_ASSEMBLY.out.polished_assembly_2
-    
-    // Use the second round by default, or choose based on the parameter
-        ch_final_polished_assembly = params.use_second_polish ? 
-    ch_polished_assembly_2 : ch_polished_assembly_1
-    
+   // Polish assembly (only one round)
+    if (params.perform_polish_assembly && params.perform_assembly) {
+        ch_polish_input = ch_hostremoved.join(ch_assembly).map { meta, reads, assembly ->
+            [meta, reads instanceof List ? reads[0] : reads, assembly instanceof List ? assembly[0] : assembly]
+        }
+        POLISH_ASSEMBLY(ch_polish_input)
+        ch_final_polished_assembly = POLISH_ASSEMBLY.out.polished_assembly_1
         ch_versions = ch_versions.mix(POLISH_ASSEMBLY.out.versions)
     } else {
         ch_final_polished_assembly = ch_assembly
     }
-    
-    ch_assembly_for_arg = ch_final_polished_assembly.map { it -> it }
 
-    */
+    // Prepare assemblies for downstream tools
+    ch_assembly_for_arg = ch_final_polished_assembly.mix(ch_hostremoved)
+        .groupTuple()
+        .map { meta, assemblies -> [meta, assemblies.find { it != null } ?: meta.reads] }
 
-    if (params.perform_polish_assembly && params.perform_assembly) {
-    // Combine the reads and assembly channels
-    ch_polish_input = ch_hostremoved.join(ch_assembly)
-        .map { meta, reads, assembly -> 
-            // Ensure reads and assembly are single files, not lists
-            def read_file = reads instanceof List ? reads[0] : reads
-            def assembly_file = assembly instanceof List ? assembly[0] : assembly
-            [meta, read_file, assembly_file]
-        }
 
-    POLISH_ASSEMBLY(ch_polish_input)
-    ch_polished_assembly_1 = POLISH_ASSEMBLY.out.polished_assembly_1
-    ch_polished_assembly_2 = POLISH_ASSEMBLY.out.polished_assembly_2
-
-    // Use the second round by default, or choose based on the parameter
-    ch_final_polished_assembly = params.use_second_polish ? 
-        ch_polished_assembly_2 : ch_polished_assembly_1
-
-    ch_versions = ch_versions.mix(POLISH_ASSEMBLY.out.versions)
-} else {
-    ch_final_polished_assembly = ch_assembly
-}
-
-ch_assembly_for_arg = ch_final_polished_assembly.mix(ch_hostremoved)
-    .groupTuple()
-    .map { meta, assemblies -> 
-        def assembly = assemblies.find { it != null }
-        [meta, assembly ?: meta.reads] // Use assembly if available, otherwise use reads
-    }
-
-    
     if (params.run_resfinder) {
     log.info "Running ResFinder"
 

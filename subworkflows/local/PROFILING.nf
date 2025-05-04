@@ -76,7 +76,7 @@ if (params.run_centrifuge) {
 
     ch_krona_html = ch_krona_html.mix(KRONA_CENTRIFUGE.out.html)
 }
-    
+   
     // Emit Outputs
     emit:
     raw_classifications = ch_raw_classifications
