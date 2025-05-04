@@ -14,3 +14,5 @@ results_test/
 MetaAMR-cleanup/
 samplesheet.csv
 ss.csv
+slurm
+results_full_run/databases/resfinder/resfinder_db/
