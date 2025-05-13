@@ -1,22 +1,17 @@
-.nextflow*
-work/
-data/
-results/
-.DS_Store
-testing/
-testing*
-*.pyc
-nxf-tmp*
-results_test/
-*.fastq.gz
-*.bam
-*.mmi
-MetaAMR-cleanup/
-samplesheet.csv
-ss.csv
-slurm
-results_full_run/databases/resfinder/resfinder_db/
+# Exclude results and temp files
+results*/
+*.slurm
+*.csv
+slurm/
 datatransfer/
 proj-test/
-results_targeted_PA/
-metaamr.slurm
+work/
+.nextflow*
+tower.yml
+*.err
+*.out
+
+# Backup/swap files
+*~
+*.swp
+.DS_Store
