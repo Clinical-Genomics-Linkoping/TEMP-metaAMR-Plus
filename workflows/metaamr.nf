@@ -18,7 +18,8 @@ include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_metaamr_pipeline'
-
+include { CENTRIFUGE_CENTRIFUGE } from '../modules/nf-core/centrifuge/centrifuge/main'
+include { CENTRIFUGE_KREPORT } from '../modules/nf-core/centrifuge/kreport/main'
 
 
 // Check input path parameters to see if they exist
@@ -90,6 +91,10 @@ include { VALIDATE_FASTA } from '../modules/local/validate_fasta'
 include { PLASCLASS } from '../modules/local/plasclass'
 include { PLASCLASS_POSTPROCESS } from '../modules/local/plasclass_postprocess.nf'
 include { PROFILING } from '../subworkflows/local/PROFILING'
+include { FILTER_READS_BY_SPECIES } from '../modules/local/filter_reads_by_species'
+include { EXTRACT_FILTERED_READS } from '../modules/local/extract_filtered_reads'
+include { RESFINDER_WITH_SPECIES } from '../modules/local/resfinder_with_species'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -400,6 +405,30 @@ workflow METAAMR {
 
 
 }
+     // STEP 1: Run species filter
+FILTER_READS_BY_SPECIES(
+    PROFILING.out.centrifuge_report.join(PROFILING.out.centrifuge_results),
+    params.target_species
+)
+
+ch_filtered_ids = FILTER_READS_BY_SPECIES.out.filtered_read_ids
+ch_species_summary = FILTER_READS_BY_SPECIES.out.species_summary
+
+// STEP 2: Extract reads from input FASTQ based on filtered IDs
+EXTRACT_FILTERED_READS(
+    ch_filtered_ids.join(ch_hostremoved)
+)
+
+// STEP 3: Combine filtered FASTQ with species summary and ResFinder DB
+ch_filtered_reads = EXTRACT_FILTERED_READS.out.filtered_reads
+ch_resfinder_input = ch_filtered_reads
+    .join(ch_species_summary)
+    .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+
+// STEP 4: Run ResFinder and map AMR genes to species
+RESFINDER_WITH_SPECIES(ch_resfinder_input)
+    
+    
     
     // Collate and save software versions
     //

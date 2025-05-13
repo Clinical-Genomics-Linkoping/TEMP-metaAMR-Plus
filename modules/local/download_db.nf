@@ -30,7 +30,12 @@ process DOWNLOAD_DB {
         rgi)
             wget https://card.mcmaster.ca/latest/data -O ${tool}_db.tar.gz
             tar -xvf ${tool}_db.tar.gz -C ${tool}_db
-            TOOL_VERSION=\$(docker run --rm quay.io/biocontainers/rgi:6.0.3--pyha8f3691_1 rgi main --version 2>&1 | sed 's/^.*v//')
+
+            if command -v rgi >/dev/null 2>&1; then
+                TOOL_VERSION=\$(rgi main --version 2>&1 | sed 's/^.*v//')
+            else
+                TOOL_VERSION="unknown"
+            fi
             ;;
         amrfinderplus)
             amrfinder_update --force_update --database ${tool}_db

@@ -48,6 +48,12 @@ workflow PROFILING {
 
         ch_krona_html = ch_krona_html.mix(KRONA_KAIJU.out.html)
     }
+    
+    
+    // Define these before the `if` block so they're always defined
+    ch_centrifuge_report  = Channel.empty()
+    ch_centrifuge_results = Channel.empty()
+
     // Run Centrifuge
 if (params.run_centrifuge) {
     ch_centrifuge_db = databases_ch.filter { it[0].tool == 'centrifuge' }.map { it[1] }
@@ -59,6 +65,8 @@ if (params.run_centrifuge) {
         params.save_centrifuge_unclassified,
         params.save_centrifuge_classified
     )
+    ch_centrifuge_report  = CENTRIFUGE_CENTRIFUGE.out.report
+    ch_centrifuge_results = CENTRIFUGE_CENTRIFUGE.out.results
     ch_versions = ch_versions.mix(CENTRIFUGE_CENTRIFUGE.out.versions)
     ch_raw_classifications = ch_raw_classifications.mix(CENTRIFUGE_CENTRIFUGE.out.results)
 
@@ -83,4 +91,6 @@ if (params.run_centrifuge) {
     raw_profiles = ch_raw_profiles
     versions = ch_versions
     krona_html = ch_krona_html
+    centrifuge_report = ch_centrifuge_report
+    centrifuge_results = ch_centrifuge_results
 }
