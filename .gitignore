@@ -16,3 +16,7 @@ samplesheet.csv
 ss.csv
 slurm
 results_full_run/databases/resfinder/resfinder_db/
+datatransfer/
+proj-test/
+results_targeted_PA/
+metaamr.slurm
