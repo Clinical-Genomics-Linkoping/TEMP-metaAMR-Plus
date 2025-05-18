@@ -1,0 +1,20 @@
+Resistance gene	Identity	Alignment Length/Gene Length	Coverage	Position in reference	Contig	Position in contig	Phenotype	Accession no.
+aac(3)-IId	99.88	861/861	100.0	1..861	contig_2 LN:i:9463 RC:i:50 XC:f:1.000000	7776..8636	Aminoglycoside resistance	EU022314
+aph(6)-Id	100.00	837/837	100.0	1..837	contig_2 LN:i:9463 RC:i:50 XC:f:1.000000	927..1763	Aminoglycoside resistance Alternate name; aph(6)-Id	M28829
+aph(3'')-Ib	100.00	803/804	99.87562189054727	2..804	contig_2 LN:i:9463 RC:i:50 XC:f:1.000000	125..927	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF024602
+aph(3'')-Ib	99.88	804/804	100.0	1..804	contig_2 LN:i:9463 RC:i:50 XC:f:1.000000	124..927	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF321551
+aph(3'')-Ib	99.88	804/804	100.0	1..804	contig_2 LN:i:9463 RC:i:50 XC:f:1.000000	124..927	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF313472
+aph(3'')-Ib	99.88	804/804	100.0	1..804	contig_2 LN:i:9463 RC:i:50 XC:f:1.000000	124..927	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF321550
+aph(3')-VI	100.00	780/780	100.0	1..780	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	61435..62214	Warning: gene is missing from Notes file. Please inform curator.	KC170992
+aac(6')-Ib	100.00	606/606	100.0	1..606	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	75086..75691	Aminoglycoside resistance	M21682
+aadA1	100.00	481/792	60.73232323232324	1..481	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	75761..76241	Aminoglycoside resistance	JX185132
+aadA1	100.00	481/789	60.96324461343473	1..481	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	75761..76241	Aminoglycoside resistance	JQ480156
+aadA1	100.00	481/792	60.73232323232324	1..481	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	75761..76241	Aminoglycoside resistance	JQ414041
+blaSHV-11	99.77	861/861	100.0	1..861	contig_1 LN:i:5377295 RC:i:9876 XC:f:0.999628	4812951..4813811	Beta-lactam resistance Alternate name; SHV-1-2a	X98101
+blaSHV-67	99.77	861/861	100.0	1..861	contig_1 LN:i:5377295 RC:i:9876 XC:f:0.999628	4812951..4813811	Beta-lactam resistance	DQ174307
+blaCTX-M-15	100.00	876/876	100.0	1..876	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	71389..72264	Beta-lactam resistance Alternate name; UOE-1	AY044436
+blaNDM-1	100.00	813/813	100.0	1..813	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	58190..59002	Beta-lactam resistance	FN396876
+fosA	98.79	413/420	98.33333333333333	1..413	contig_1 LN:i:5377295 RC:i:9876 XC:f:0.999628	1299588..1300000	Fosfomycin resistance	AFBO01000747
+OqxB	98.54	3153/3153	100.0	1..3153	contig_1 LN:i:5377295 RC:i:9876 XC:f:0.999628	3188012..3191164	Warning: gene is missing from Notes file. Please inform curator.	EU370913
+OqxA	99.49	1176/1176	100.0	1..1176	contig_1 LN:i:5377295 RC:i:9876 XC:f:0.999628	3191188..3192363	Warning: gene is missing from Notes file. Please inform curator.	EU370913
+qnrS1	100.00	657/657	100.0	1..657	contig_4 LN:i:110871 RC:i:194 XC:f:1.000000	66092..66748	Quinolone resistance	AB187515

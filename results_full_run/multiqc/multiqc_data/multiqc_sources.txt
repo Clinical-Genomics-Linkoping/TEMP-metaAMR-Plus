@@ -1,2 +1,0 @@
-Module	Section	Sample Name	Source
-FastQC	all_sections	sample_09_null_raw	/mnt/projects/MetaAMR-PLUS/MetaAMR/work/cf/22ca22193c770ca4c3e16a7ac4867f/3/sample_09_null_raw_fastqc.zip

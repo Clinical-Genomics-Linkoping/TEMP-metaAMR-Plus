@@ -1,0 +1,26 @@
+Resistance gene	Identity	Alignment Length/Gene Length	Coverage	Position in reference	Contig	Position in contig	Phenotype	Accession no.
+aph(6)-Id	100.00	837/837	100.0	1..837	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3737953..3738789	Aminoglycoside resistance Alternate name; aph(6)-Id	M28829
+aph(3'')-Ib	100.00	803/804	99.87562189054727	2..804	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3738789..3739591	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF024602
+aph(3'')-Ib	99.88	804/804	100.0	1..804	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3738789..3739592	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF321551
+aph(3'')-Ib	99.88	804/804	100.0	1..804	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3738789..3739592	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF313472
+aph(3'')-Ib	99.88	804/804	100.0	1..804	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3738789..3739592	Aminoglycoside resistance Alternate name; aph(3'')-Ib	AF321550
+aadA2	100.00	792/792	100.0	1..792	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	2293309..2294100	Aminoglycoside resistance	JQ364967
+aph(3')-VI	100.00	780/780	100.0	1..780	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	55546..56325	Warning: gene is missing from Notes file. Please inform curator.	KC170992
+aac(6')-Ib	100.00	606/606	100.0	1..606	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	42071..42676	Aminoglycoside resistance	M21682
+aadA1	100.00	481/792	60.73232323232324	1..481	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	41521..42001	Aminoglycoside resistance	JX185132
+aadA1	100.00	481/789	60.96324461343473	1..481	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	41521..42001	Aminoglycoside resistance	JQ480156
+aadA1	100.00	481/792	60.73232323232324	1..481	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	41521..42001	Aminoglycoside resistance	JQ414041
+blaCTX-M-14	100.00	876/876	100.0	1..876	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3148266..3149141	Beta-lactam resistance Amino acid sequences of CTX-M-14 and CTX-M-18 are identical	AF252622
+blaSHV-11	99.77	861/861	100.0	1..861	contig_2 LN:i:5374508 RC:i:1179 XC:f:0.997767	4812641..4813501	Beta-lactam resistance Alternate name; SHV-1-2a	X98101
+blaSHV-67	99.77	861/861	100.0	1..861	contig_2 LN:i:5374508 RC:i:1179 XC:f:0.997767	4812641..4813501	Beta-lactam resistance	DQ174307
+blaCTX-M-15	100.00	876/876	100.0	1..876	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	45498..46373	Beta-lactam resistance Alternate name; UOE-1	AY044436
+blaNDM-1	100.00	813/813	100.0	1..813	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	58758..59570	Beta-lactam resistance	FN396876
+penA	94.90	1746/1746	100.0	1..1746	contig_4 LN:i:2436394 RC:i:1167 XC:f:0.999180	2162844..2164589	Beta-lactam resistance	AF515059
+fosA	98.79	413/420	98.33333333333333	1..413	contig_2 LN:i:5374508 RC:i:1179 XC:f:0.997767	1299341..1299753	Fosfomycin resistance	AFBO01000747
+mph(A)	100.00	906/906	100.0	1..906	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	2300755..2301660	Macrolide resistance	D16251
+OqxB	98.54	3153/3153	100.0	1..3153	contig_2 LN:i:5374508 RC:i:1179 XC:f:0.997767	3187740..3190892	Warning: gene is missing from Notes file. Please inform curator.	EU370913
+OqxA	99.49	1176/1176	100.0	1..1176	contig_2 LN:i:5374508 RC:i:1179 XC:f:0.997767	3190916..3192091	Warning: gene is missing from Notes file. Please inform curator.	EU370913
+qnrS1	100.00	657/657	100.0	1..657	contig_3 LN:i:110865 RC:i:17 XC:f:1.000000	51013..51669	Quinolone resistance	AB187515
+sul1	100.00	840/840	100.0	1..840	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	2294605..2295444	Sulphonamide resistance	U12338
+sul2	100.00	816/816	100.0	1..816	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	3732474..3733289	Sulphonamide resistance	AY034138
+dfrA12	100.00	498/498	100.0	1..498	contig_1 LN:i:5111899 RC:i:2839 XC:f:0.999413	2292404..2292901	Trimethoprim resistance	AM040708

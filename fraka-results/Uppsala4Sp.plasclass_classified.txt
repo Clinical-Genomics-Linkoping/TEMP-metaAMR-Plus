@@ -1,0 +1,5 @@
+Contig_ID	Classification
+contig_1	chromosome
+contig_2	chromosome
+contig_3	plasmid
+contig_4	chromosome

@@ -35,12 +35,9 @@ nextflow run main.nf \
   --run_plasclass \
   --run_hamronization \
   --run_profiling \
-  --run_centrifuge 
-   -run_centrifuge \
-   --amr_summary_mode "top" --top_species 5
-   --amr_summary_mode targeted" --target_species "Klebsiella pneumoniae,Escherichia coli"
-  
-           
+  --run_centrifuge \
+  --target_species "Escherichia coli" 
+        
 
 echo "========== Job ended at $(date) =========="
 

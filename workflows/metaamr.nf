@@ -94,6 +94,8 @@ include { PROFILING } from '../subworkflows/local/PROFILING'
 include { FILTER_READS_BY_SPECIES } from '../modules/local/filter_reads_by_species'
 include { EXTRACT_FILTERED_READS } from '../modules/local/extract_filtered_reads'
 include { RESFINDER_WITH_SPECIES } from '../modules/local/resfinder_with_species'
+include { COMBINE_CONTIGS_AND_SPECIES } from '../modules/local/combine_contigs_and_species'
+include { SUMMARIZE_BY_CONTIG } from '../modules/local/summarize_by_contig'
 
 
 /*
@@ -356,11 +358,14 @@ workflow METAAMR {
     }
     
         
-     // Collect results from AMR tools
-    ch_abricate_results = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()
-    ch_amrfinderplus_results = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()
-    ch_rgi_results = params.run_rgi ? RGI_MAIN.out.tsv : Channel.empty()
-
+    // Collect results from AMR/plasmid tools
+    ch_abricate_results       = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()
+    ch_amrfinderplus_results  = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()
+    ch_rgi_results            = params.run_rgi ? RGI_MAIN.out.tsv : Channel.empty()
+    ch_resfinder_results      = params.run_resfinder ? RESFINDER_RUN.out.report : Channel.empty()
+    ch_plasmidfinder_results  = params.run_plasmidfinder ? PLASMIDFINDER_RUN.out.report : Channel.empty()
+    ch_plasclass_results      = params.run_plasclass ? PLASCLASS_RUN.out.report : Channel.empty()
+   
 
      // Count the number of active AMR tools
     def active_amr_tools = [params.run_abricate, params.run_amrfinderplus, params.run_rgi].count { it }
@@ -402,32 +407,87 @@ workflow METAAMR {
 
     ch_versions = ch_versions.mix(PROFILING.out.versions)
     ch_multiqc_files = ch_multiqc_files.mix(PROFILING.out.raw_profiles.collect { it[1] }.ifEmpty([]))
+    // COMBINE_CONTIGS_AND_SPECIES module call 
+    COMBINE_CONTIGS_AND_SPECIES(
+        PROFILING.out.centrifuge_results.join(PROFILING.out.centrifuge_report)
+    )
 
 
 }
-     // STEP 1: Run species filter
-FILTER_READS_BY_SPECIES(
-    PROFILING.out.centrifuge_report.join(PROFILING.out.centrifuge_results),
-    params.target_species
-)
 
-ch_filtered_ids = FILTER_READS_BY_SPECIES.out.filtered_read_ids
-ch_species_summary = FILTER_READS_BY_SPECIES.out.species_summary
+    ch_centrifuge_species = params.run_centrifuge ? COMBINE_CONTIGS_AND_SPECIES.out.contigs_species_table : Channel.empty()
+    ch_centrifuge_results = ch_centrifuge_species
 
-// STEP 2: Extract reads from input FASTQ based on filtered IDs
-EXTRACT_FILTERED_READS(
-    ch_filtered_ids.join(ch_hostremoved)
-)
+    if (params.target_species) {
+    // STEP 1: Run species filter
+    FILTER_READS_BY_SPECIES(
+        PROFILING.out.centrifuge_report.join(PROFILING.out.centrifuge_results),
+        params.target_species
+    )
 
-// STEP 3: Combine filtered FASTQ with species summary and ResFinder DB
-ch_filtered_reads = EXTRACT_FILTERED_READS.out.filtered_reads
-ch_resfinder_input = ch_filtered_reads
-    .join(ch_species_summary)
-    .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+    ch_filtered_ids = FILTER_READS_BY_SPECIES.out.filtered_read_ids
+    ch_species_summary = FILTER_READS_BY_SPECIES.out.species_summary
 
-// STEP 4: Run ResFinder and map AMR genes to species
-RESFINDER_WITH_SPECIES(ch_resfinder_input)
+    // STEP 2: Extract reads from input FASTQ based on filtered IDs
+    EXTRACT_FILTERED_READS(
+        ch_filtered_ids.join(ch_hostremoved)
+    )
+
+    // STEP 3: Combine filtered FASTQ with species summary and ResFinder DB
+    ch_filtered_reads = EXTRACT_FILTERED_READS.out.filtered_reads
+    ch_resfinder_input = ch_filtered_reads
+        .join(ch_species_summary)
+        .combine(PREPARE_TOOL_DBS.out.resfinder_db)
+
+    // STEP 4: Run ResFinder and map AMR genes to species
+    RESFINDER_WITH_SPECIES(ch_resfinder_input)
+}
     
+    // Combine all tool results into one channel
+    ch_all_results = Channel.empty()
+    ch_all_results = ch_all_results.mix(ch_abricate_results)
+    ch_all_results = ch_all_results.mix(ch_amrfinderplus_results)
+    ch_all_results = ch_all_results.mix(ch_rgi_results)
+    ch_all_results = ch_all_results.mix(ch_plasmidfinder_results)
+    ch_all_results = ch_all_results.mix(ch_plasclass_results)
+    ch_all_results = ch_all_results.mix(ch_resfinder_results)
+    ch_all_results = ch_all_results.mix(ch_centrifuge_results) 
+
+    // Group results by sample
+    ch_grouped_results = ch_all_results.groupTuple(by: 0)
+
+    // Define the tools to summarize based on which tools were run
+    def tools_to_summarize = []
+    if (params.run_abricate) tools_to_summarize.add('abricate')
+    if (params.run_amrfinderplus) tools_to_summarize.add('amrfinder')
+    if (params.run_rgi) tools_to_summarize.add('rgi')
+    if (params.run_plasmidfinder) tools_to_summarize.add('plasmidfinder')
+    if (params.run_plasclass) tools_to_summarize.add('plasclass')
+    if (params.run_resfinder) tools_to_summarize.add('resfinder')
+    if (params.run_centrifuge) tools_to_summarize.add('centrifuge')
+    
+   // Run summarization if enabled and at least one tool was run
+    if (params.run_summarization) {
+        if (tools_to_summarize.isEmpty()) {
+            log.warn "No tools were selected for summarization. Skipping SUMMARIZE_BY_CONTIG process."
+        } else {
+            log.info "Summarizing results from the following tools: ${tools_to_summarize.join(', ')}"
+            
+            def tools_string = tools_to_summarize.join(',')
+
+            // Run SUMMARIZE_BY_CONTIG process
+            SUMMARIZE_BY_CONTIG (
+                ch_grouped_results,
+                tools_string
+            )
+
+            // Capture the summarized results and versions
+            ch_summarized_results = SUMMARIZE_BY_CONTIG.out.summary
+            ch_versions = ch_versions.mix(SUMMARIZE_BY_CONTIG.out.versions)
+        }
+    } else {
+        log.info "Skipping summarization step (params.run_summarization is false)"
+    }
     
     
     // Collate and save software versions
@@ -441,7 +501,7 @@ RESFINDER_WITH_SPECIES(ch_resfinder_input)
         ).set { ch_collated_versions }
     
     
-    //
+  //
     // MODULE: MultiQC
     //
     ch_multiqc_config        = Channel.fromPath(
