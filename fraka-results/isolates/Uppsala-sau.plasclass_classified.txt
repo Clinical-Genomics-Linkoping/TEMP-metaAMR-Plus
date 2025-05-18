@@ -1,2 +1,0 @@
-Contig_ID	Classification
-contig_1	chromosome

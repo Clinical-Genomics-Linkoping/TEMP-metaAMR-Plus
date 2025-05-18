@@ -1,2 +1,0 @@
-Resistance gene	Identity	Alignment Length/Gene Length	Coverage	Position in reference	Contig	Position in contig	Phenotype	Accession no.
-penA	94.90	1746/1746	100.0	1..1746	contig_1 LN:i:2436390 RC:i:5976 XC:f:1.000000	229124..230869	Beta-lactam resistance	AF515059

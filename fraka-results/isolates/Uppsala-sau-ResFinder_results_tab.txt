@@ -1,9 +1,0 @@
-Resistance gene	Identity	Alignment Length/Gene Length	Coverage	Position in reference	Contig	Position in contig	Phenotype	Accession no.
-ant(9)-Ia	100.00	783/783	100.0	1..783	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	3647..4429	Warning: gene is missing from Notes file. Please inform curator.	X02588
-ant(9)-Ia	100.00	783/783	100.0	1..783	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	1693789..1694571	Warning: gene is missing from Notes file. Please inform curator.	X02588
-aadD	100.00	762/762	100.0	1..762	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	1709851..1710612	Aminoglycoside resistance Alternate name; ant(4')-Ia and aadD2	M19465
-mecA	100.00	2007/2007	100.0	1..2007	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	1704393..1706399	Beta-lactam resistance	BX571856
-blaZ	100.00	846/846	100.0	1..846	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	2565330..2566175	Beta-lactam resistance	AHKZ01000073
-erm(A)	100.00	732/732	100.0	1..732	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	1694697..1695428	Macrolide resistance	X03216
-erm(A)	100.00	732/732	100.0	1..732	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	4555..5286	Macrolide resistance	X03216
-bleO	100.00	399/399	100.0	1..399	contig_1 LN:i:2884527 RC:i:20954 XC:f:1.000000	1710835..1711233	Glycopeptide resistance	AF051917
