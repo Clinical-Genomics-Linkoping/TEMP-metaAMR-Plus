@@ -13,7 +13,7 @@ include { AMRFINDERPLUS_UPDATE } from '../modules/nf-core/amrfinderplus/update/m
 include { ABRICATE_RUN } from '../modules/nf-core/abricate/run/main' 
 include { RGI_CARDANNOTATION } from '../modules/nf-core/rgi/cardannotation/main' 
 include { RGI_MAIN } from '../modules/nf-core/rgi/main/main' 
-include { PLASMIDFINDER } from '../modules/nf-core/plasmidfinder/main'
+include { PLASMIDFINDER_RUN } from '../modules/nf-core/plasmidfinder/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -95,8 +95,11 @@ include { FILTER_READS_BY_SPECIES } from '../modules/local/filter_reads_by_speci
 include { EXTRACT_FILTERED_READS } from '../modules/local/extract_filtered_reads'
 include { RESFINDER_WITH_SPECIES } from '../modules/local/resfinder_with_species'
 include { COMBINE_CONTIGS_AND_SPECIES } from '../modules/local/combine_contigs_and_species'
-include { SUMMARIZE_BY_CONTIG } from '../modules/local/summarize_by_contig'
-
+include { AMRFINDERPLUS_POSTPROCESS} from '../modules/local/amrfinderplus_postprocess'
+include { RGI_POSTPROCESS} from '../modules/local/rgi_postprocess'
+include { ABRICATE_POSTPROCESS} from '../modules/local/abricate_postprocess'
+include { RESFINDER_POSTPROCESS} from '../modules/local/resfinder_postprocess'
+include { MERGE_TOOL_TABLES} from '../modules/local/merge_tools_tables'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -272,6 +275,7 @@ workflow METAAMR {
             "AMRFinderPlus outputs for ${meta.id}: ${report.getName()}"
         }
         ch_multiqc_files = ch_multiqc_files.mix(AMRFINDERPLUS_RUN.out.report.collect{it[1]}.ifEmpty([]))
+        
     }
 
 
@@ -298,10 +302,7 @@ workflow METAAMR {
             .ifEmpty { log.warn "No output from RGI_MAIN process" }
 
         ch_multiqc_files = ch_multiqc_files.mix(
-            RGI_MAIN.out.tsv
-                .map { meta, tsv -> tsv }
-                .collect()
-                .ifEmpty([])
+            RGI_MAIN.out.tsv.map { meta, tsv -> tsv }.ifEmpty([])
         )
     }    
     
@@ -326,15 +327,16 @@ workflow METAAMR {
         ch_plasmidfinder_input = ch_validated_assemblies.combine(PREPARE_TOOL_DBS.out.plasmidfinder_db)
 
     // Run PlasmidFinder
-        PLASMIDFINDER(ch_validated_assemblies, PREPARE_TOOL_DBS.out.plasmidfinder_db)
+        PLASMIDFINDER_RUN(ch_validated_assemblies, PREPARE_TOOL_DBS.out.plasmidfinder_db)
 
     // Collect versions
-        ch_versions = ch_versions.mix(PLASMIDFINDER.out.versions)
+        ch_versions = ch_versions.mix(PLASMIDFINDER_RUN.out.versions)
 
     // Add PlasmidFinder results to MultiQC if required
         ch_multiqc_files = ch_multiqc_files.mix(
-            PLASMIDFINDER.out.tsv.collect { it[1] }.ifEmpty([])
+            PLASMIDFINDER_RUN.out.tsv.collect { it[1] }.ifEmpty([])
         )
+        
     }
 
     // Run PlasClass
@@ -357,20 +359,23 @@ workflow METAAMR {
         )
     }
     
-        
+  
     // Collect results from AMR/plasmid tools
     ch_abricate_results       = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()
+    ch_abricate_summary_results = Channel.empty()
     ch_amrfinderplus_results  = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()
+    //ch_amrfinderplus_summary_results = Channel.empty()
     ch_rgi_results            = params.run_rgi ? RGI_MAIN.out.tsv : Channel.empty()
-    ch_resfinder_results      = params.run_resfinder ? RESFINDER_RUN.out.report : Channel.empty()
-    ch_plasmidfinder_results  = params.run_plasmidfinder ? PLASMIDFINDER_RUN.out.report : Channel.empty()
-    ch_plasclass_results      = params.run_plasclass ? PLASCLASS_RUN.out.report : Channel.empty()
+    ch_rgi_summary_results =  Channel.empty()
+    ch_resfinder_results = params.run_resfinder ? RESFINDER_RUN.out.txt : Channel.empty()
+    //ch_resfinder_summary_results = Channel.empty()
+    ch_plasmidfinder_results = params.run_plasmidfinder ? PLASMIDFINDER_RUN.out.tsv : Channel.empty()
+    ch_plasclass_results      = params.run_plasclass ? PLASCLASS.out.report : Channel.empty()
    
 
-     // Count the number of active AMR tools
-    def active_amr_tools = [params.run_abricate, params.run_amrfinderplus, params.run_rgi].count { it }
-    // Run HAMRONIZATION only if more than one AMR tool is active and run_hamronization is true
-    if (params.run_hamronization && active_amr_tools > 1) {
+
+    
+    if (params.run_hamronization) {
         HAMRONIZATION (
             ch_abricate_results,
             ch_amrfinderplus_results,
@@ -379,8 +384,10 @@ workflow METAAMR {
         ch_versions = ch_versions.mix(HAMRONIZATION.out.versions.ifEmpty([]))
         ch_multiqc_files = ch_multiqc_files.mix(HAMRONIZATION.out.summary.collect{it[1]}.ifEmpty([]))
     } else {
-        log.info "Skipping HAMRONIZATION: Either fewer than two AMR tools are active or run_hamronization is set to false."
+        log.info "Skipping HAMRONIZATION: run_hamronization is set to false."
     }
+   
+    
     
     if (params.run_profiling) {
     ch_profiling_input = ch_final_polished_assembly.map { meta, assembly -> 
@@ -407,16 +414,16 @@ workflow METAAMR {
 
     ch_versions = ch_versions.mix(PROFILING.out.versions)
     ch_multiqc_files = ch_multiqc_files.mix(PROFILING.out.raw_profiles.collect { it[1] }.ifEmpty([]))
-    // COMBINE_CONTIGS_AND_SPECIES module call 
+    // COMBINE_CONTIGS_AND_SPECIES module call
     COMBINE_CONTIGS_AND_SPECIES(
         PROFILING.out.centrifuge_results.join(PROFILING.out.centrifuge_report)
     )
 
 
-}
+    }
+        ch_centrifuge_species = params.run_centrifuge ? COMBINE_CONTIGS_AND_SPECIES.out.contigs_species_table : Channel.empty()
+        ch_centrifuge_results = ch_centrifuge_species
 
-    ch_centrifuge_species = params.run_centrifuge ? COMBINE_CONTIGS_AND_SPECIES.out.contigs_species_table : Channel.empty()
-    ch_centrifuge_results = ch_centrifuge_species
 
     if (params.target_species) {
     // STEP 1: Run species filter
@@ -442,53 +449,108 @@ workflow METAAMR {
     // STEP 4: Run ResFinder and map AMR genes to species
     RESFINDER_WITH_SPECIES(ch_resfinder_input)
 }
+
+
+
+
+
+
+
+    if (params.run_summar && params.run_resfinder) {
+        RESFINDER_POSTPROCESS(RESFINDER_RUN.out.table)
     
-    // Combine all tool results into one channel
-    ch_all_results = Channel.empty()
-    ch_all_results = ch_all_results.mix(ch_abricate_results)
-    ch_all_results = ch_all_results.mix(ch_amrfinderplus_results)
-    ch_all_results = ch_all_results.mix(ch_rgi_results)
-    ch_all_results = ch_all_results.mix(ch_plasmidfinder_results)
-    ch_all_results = ch_all_results.mix(ch_plasclass_results)
-    ch_all_results = ch_all_results.mix(ch_resfinder_results)
-    ch_all_results = ch_all_results.mix(ch_centrifuge_results) 
-
-    // Group results by sample
-    ch_grouped_results = ch_all_results.groupTuple(by: 0)
-
-    // Define the tools to summarize based on which tools were run
-    def tools_to_summarize = []
-    if (params.run_abricate) tools_to_summarize.add('abricate')
-    if (params.run_amrfinderplus) tools_to_summarize.add('amrfinder')
-    if (params.run_rgi) tools_to_summarize.add('rgi')
-    if (params.run_plasmidfinder) tools_to_summarize.add('plasmidfinder')
-    if (params.run_plasclass) tools_to_summarize.add('plasclass')
-    if (params.run_resfinder) tools_to_summarize.add('resfinder')
-    if (params.run_centrifuge) tools_to_summarize.add('centrifuge')
-    
-   // Run summarization if enabled and at least one tool was run
-    if (params.run_summarization) {
-        if (tools_to_summarize.isEmpty()) {
-            log.warn "No tools were selected for summarization. Skipping SUMMARIZE_BY_CONTIG process."
-        } else {
-            log.info "Summarizing results from the following tools: ${tools_to_summarize.join(', ')}"
-            
-            def tools_string = tools_to_summarize.join(',')
-
-            // Run SUMMARIZE_BY_CONTIG process
-            SUMMARIZE_BY_CONTIG (
-                ch_grouped_results,
-                tools_string
-            )
-
-            // Capture the summarized results and versions
-            ch_summarized_results = SUMMARIZE_BY_CONTIG.out.summary
-            ch_versions = ch_versions.mix(SUMMARIZE_BY_CONTIG.out.versions)
+    // Extract sample_id + dir from ResFinder POSTPROCESSED summary
+        ch_resfinder_summary_results = RESFINDER_POSTPROCESS.out.summary.map { meta, summary_file ->
+        // The file is already named correctly: ${meta.id}_resfinder_summary.tsv
+            def sample_id = meta.id.toLowerCase().trim()
+            tuple(sample_id, summary_file.parent)
         }
     } else {
-        log.info "Skipping summarization step (params.run_summarization is false)"
+        ch_resfinder_summary_results = Channel.empty()
     }
-    
+
+    /*
+
+    if (params.run_summar && params.run_amrfinderplus) {
+        AMRFINDERPLUS_POSTPROCESS(HAMRONIZATION.out.amrfinderplus)
+        ch_amrfinderplus_summary_results = AMRFINDERPLUS_POSTPROCESS.out
+    }
+*/
+
+    if (params.run_summar && params.run_amrfinderplus) {
+        AMRFINDERPLUS_POSTPROCESS(HAMRONIZATION.out.amrfinderplus)
+        ch_amrfinderplus_summary_results = AMRFINDERPLUS_POSTPROCESS.out.summary.map { meta, summary_file ->
+            // The file is already named correctly: ${meta.id}_amrfinderplus_summary.tsv
+            def sample_id = meta.id.toLowerCase().trim()
+            tuple(sample_id, summary_file.parent)
+        }
+    } else {
+        ch_amrfinderplus_summary_results = Channel.empty()
+    }
+     
+    if (params.run_summar && params.run_rgi) {
+        RGI_POSTPROCESS(HAMRONIZATION.out.rgi)
+        ch_rgi_summary_results = RGI_POSTPROCESS.out
+    }
+
+    if (params.run_summar && params.run_abricate) {
+        ABRICATE_POSTPROCESS(HAMRONIZATION.out.abricate)
+        ch_abricate_summary_results = ABRICATE_POSTPROCESS.out
+    }
+
+ 
+
+
+
+     
+    // Extract sample_id + dir from PlasmidFinder results (outside the main conditional)
+    ch_plasmidfinder_results = params.run_plasmidfinder ? PLASMIDFINDER_RUN.out.tsv : Channel.empty()
+    ch_plasmidfinder_summary_results = params.run_plasmidfinder ? 
+        ch_plasmidfinder_results.map { meta, tsv_file ->
+            def sample_id = meta.id.toLowerCase().trim()
+            tuple(sample_id, tsv_file.parent)
+        } : Channel.empty()
+
+    // Extract sample_id + dir from Centrifuge summary
+    ch_centrifuge_summary_results = params.run_centrifuge ? ch_centrifuge_results.map { meta, files ->
+    // Find the specific file we need
+        def fileList = files instanceof List ? files : [files]
+        def targetFile = fileList.find { it.name.endsWith('_contigs_species.tsv') }
+        if (!targetFile) {
+            error "Could not find *_contigs_species.tsv file in: ${fileList}"
+        }
+        def sample_id = targetFile.baseName.replaceFirst(/_contigs_species$/, "").toLowerCase().trim()
+        tuple(sample_id, targetFile.parent)
+    } : Channel.empty()
+
+// DEBUG: View channel contents before joining
+    ch_centrifuge_summary_results.view { " Centrifuge summary: $it" }
+    ch_resfinder_summary_results.view { " ResFinder summary: $it" }
+    ch_amrfinderplus_summary_results.view { "AMRFinderPlus summary: $it" }
+    ch_plasmidfinder_summary_results.view { "PlasmidFinder summary: $it" }
+
+// Join both channels by sample_id and run MERGE
+if (params.run_summar) {
+    ch_merge_inputs = ch_centrifuge_summary_results
+        .join(ch_resfinder_summary_results)
+        .join(ch_amrfinderplus_summary_results)
+        .join(ch_plasmidfinder_summary_results)
+        .map { sample_id, cent_dir, res_dir , amr_dir ,plas_dir -> 
+            tuple(sample_id, cent_dir, res_dir,amr_dir , plas_dir)
+        }
+
+    ch_merge_inputs.view { "Merge input: $it" }
+
+    MERGE_TOOL_TABLES(ch_merge_inputs)
+}
+
+
+
+
+
+
+
+
     
     // Collate and save software versions
     //

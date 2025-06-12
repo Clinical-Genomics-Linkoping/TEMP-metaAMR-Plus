@@ -18,26 +18,20 @@ nextflow run main.nf \
   --input samplesheet.csv \
   --databases database.csv \
   --outdir results-contig \
-  --perform_trim \
-  --perform_hostremoval \
-  --hostremoval_reference /mnt/reference/Reference_Genomes/ucsc_hg38/hg38.fa \
   --perform_assembly \
-  --perform_polish_assembly \
   --run_resfinder \
   --download_resfinder_db \
-  --run_rgi \
-  --download_rgi_db \
   --run_amrfinderplus \
   --download_amrfinderplus_db \
-  --run_abricate \
   --run_plasmidfinder \
   --download_plasmidfinder_db \
-  --run_plasclass \
   --run_hamronization \
   --run_profiling \
   --run_centrifuge \
-  --run_summarization \
-  -resume
+  --run_summar 
+  
+  
+  
 
         
 

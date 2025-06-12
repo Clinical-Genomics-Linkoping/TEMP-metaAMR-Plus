@@ -14,6 +14,7 @@ process AMRFINDERPLUS_RUN {
     output:
     tuple val(meta), path("${prefix}_amrfinder.tsv")            , emit: report
     tuple val(meta), path("${prefix}_amrfinder_mutations.tsv"), emit: mutation_report, optional: true
+    tuple val(meta), val("amrfinderplus")                       , emit: format
     path "versions.yml"                             , emit: versions
     env VER                                         , emit: tool_version
     env DBVER                                       , emit: db_version

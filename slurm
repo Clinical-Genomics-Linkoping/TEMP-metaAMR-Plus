@@ -69,4 +69,4 @@ nextflow run main.nf \
   --run_centrifuge \
   -resume
   
- 
+ --run_summarization \

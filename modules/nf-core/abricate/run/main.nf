@@ -11,10 +11,18 @@ process ABRICATE_RUN {
     input:
     tuple val(meta), path(assembly)
     val db_name
-    
+    /*
     output:
     tuple val(meta), path("${meta.id}_abricate.tsv"), emit: report
     path "versions.yml"           , emit: versions
+*/
+
+    output:
+    tuple val(meta), path("${meta.id}_abricate.tsv"), emit: report
+    tuple val(meta), val("abricate"), emit: format
+    tuple val(meta), val("abricate-1.0.1"), emit: software_version
+    tuple val(meta), val(db_name), emit: reference_db_version
+    path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when   

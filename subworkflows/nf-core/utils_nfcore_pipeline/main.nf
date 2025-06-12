@@ -93,11 +93,16 @@ def getWorkflowVersion() {
 // Get software versions for pipeline
 //
 def processVersionsFromYAML(yaml_file) {
+    if (!yaml_file || yaml_file.toString() == '[]') {
+        return ''
+    }
+
     def yaml = new org.yaml.snakeyaml.Yaml()
-    def versions = yaml.load(yaml_file).collectEntries { k, v -> [k.tokenize(':')[-1], v] }
+    def file = new File(yaml_file.toString())
+
+    def versions = yaml.load(file).collectEntries { k, v -> [k.tokenize(':')[-1], v] }
     return yaml.dumpAsMap(versions).trim()
 }
-
 //
 // Get workflow version for pipeline
 //

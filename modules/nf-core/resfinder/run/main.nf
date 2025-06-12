@@ -11,6 +11,7 @@ process RESFINDER_RUN {
     tuple val(meta), path(reads), path(assembly), path(db), val(args)
 
     output:
+    tuple val(meta), path("${meta.id}/${meta.id}-ResFinder_results_table.txt"), emit: table
     tuple val(meta), path("${meta.id}/${meta.id}-*.json"), emit: json
     tuple val(meta), path("${meta.id}/${meta.id}-*.fsa"), emit: fsa
     tuple val(meta), path("${meta.id}/${meta.id}-*.txt"), emit: txt

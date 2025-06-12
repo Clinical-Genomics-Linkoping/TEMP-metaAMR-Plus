@@ -74,4 +74,7 @@ workflow HAMRONIZATION {
     summary = ch_summary
     versions = ch_versions
     harmonized_reports = ch_reports_to_summarize
+    abricate = HAMRONIZATION_ABRICATE.out.tsv
+    amrfinderplus = HAMRONIZATION_AMRFINDERPLUS.out.tsv
+    rgi = HAMRONIZATION_RGI.out.tsv
 }

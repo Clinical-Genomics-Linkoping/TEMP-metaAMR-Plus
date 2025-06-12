@@ -1,4 +1,4 @@
-# Exclude results and temp files
+# Exclude result and temporary files
 results*/
 *.slurm
 *.csv
@@ -10,6 +10,10 @@ work/
 tower.yml
 *.err
 *.out
+
+# Project-specific files to exclude
+metaamr.slurm
+samplesheet.csv
 
 # Backup/swap files
 *~

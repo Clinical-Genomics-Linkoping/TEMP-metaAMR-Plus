@@ -1,4 +1,4 @@
-process PLASMIDFINDER {
+process PLASMIDFINDER_RUN {
     tag "$meta.id"
     label 'process_low'
 
