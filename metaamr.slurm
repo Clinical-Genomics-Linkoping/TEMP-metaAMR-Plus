@@ -17,21 +17,12 @@ nextflow run main.nf \
   -profile docker \
   --input samplesheet.csv \
   --databases database.csv \
-  --outdir results-contig \
-  --perform_assembly \
-  --run_resfinder \
+  --outdir results \
   --download_resfinder_db \
-  --run_amrfinderplus \
-  --download_amrfinderplus_db \
-  --run_plasmidfinder \
-  --download_plasmidfinder_db \
-  --run_hamronization \
   --run_profiling \
   --run_centrifuge \
-  --run_summar 
-  
-  
-  
+  --target_species "Klebsiella pneumoniae" \
+  -resume
 
         
 

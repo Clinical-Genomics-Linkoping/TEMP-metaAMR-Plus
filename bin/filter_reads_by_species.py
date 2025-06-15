@@ -17,7 +17,7 @@ def get_species_taxids(report_file, species_list):
             if rank == 'species':
                 name_lower = name.lower()
                 name_to_taxid[name_lower] = taxid
-                taxid_to_name[taxid] = name  # <-- For later summary writing
+                taxid_to_name[taxid] = name
 
     selected_taxids = []
     for s in species_list:
@@ -26,13 +26,22 @@ def get_species_taxids(report_file, species_list):
             selected_taxids.append(name_to_taxid[key])
         else:
             print(f"WARNING: Species '{s}' not found in report.", file=sys.stderr)
-    if not selected_taxids:
-        print("ERROR: No matching taxIDs found for the specified species.", file=sys.stderr)
-        sys.exit(1)
+
     return selected_taxids, taxid_to_name
 
 def extract_reads(results_file, taxid_list, taxid_to_name, output_file, summary_file):
     species_read_counts = defaultdict(int)
+
+    if not taxid_list:
+        # Write dummy empty output and summary
+        print("No matching taxIDs found — creating empty output.", file=sys.stderr)
+        with open(output_file, 'w') as out:
+            pass
+        with open(summary_file, 'w') as summary:
+            summary.write("TaxID\tSpecies\tCount\tStatus\n")
+            summary.write("NA\tNA\t0\tAbsent\n")
+        return
+
     with open(results_file) as infile, open(output_file, 'w') as out:
         for line in infile:
             parts = line.strip().split('\t')
@@ -44,7 +53,6 @@ def extract_reads(results_file, taxid_list, taxid_to_name, output_file, summary_
                 out.write(f"{read_id}\t{taxid}\n")
                 species_read_counts[taxid] += 1
 
-    # Write improved summary
     with open(summary_file, 'w') as summary:
         summary.write("TaxID\tSpecies\tCount\tStatus\n")
         for taxid in taxid_list:

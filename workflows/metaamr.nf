@@ -95,10 +95,7 @@ include { FILTER_READS_BY_SPECIES } from '../modules/local/filter_reads_by_speci
 include { EXTRACT_FILTERED_READS } from '../modules/local/extract_filtered_reads'
 include { RESFINDER_WITH_SPECIES } from '../modules/local/resfinder_with_species'
 include { COMBINE_CONTIGS_AND_SPECIES } from '../modules/local/combine_contigs_and_species'
-include { AMRFINDERPLUS_POSTPROCESS} from '../modules/local/amrfinderplus_postprocess'
-include { RGI_POSTPROCESS} from '../modules/local/rgi_postprocess'
-include { ABRICATE_POSTPROCESS} from '../modules/local/abricate_postprocess'
-include { RESFINDER_POSTPROCESS} from '../modules/local/resfinder_postprocess'
+include { RESFINDER_POSTPROCESS } from '../modules/local/resfinder_postprocess'
 include { MERGE_TOOL_TABLES} from '../modules/local/merge_tools_tables'
 
 /*
@@ -134,12 +131,13 @@ workflow METAAMR {
     //
     // MODULE: Run FastQC
     //
-    FASTQC (
-        ch_samplesheet
-    )
-    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
-    ch_versions = ch_versions.mix(FASTQC.out.versions.first())
-    
+    if (params.run_fastqc) {
+        FASTQC (
+            ch_samplesheet
+        )
+        ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
+        ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+    }
     //
     // MODULE: Run PORECHOPS & FILTLONG
     //
@@ -362,20 +360,17 @@ workflow METAAMR {
   
     // Collect results from AMR/plasmid tools
     ch_abricate_results       = params.run_abricate ? ABRICATE_RUN.out.report : Channel.empty()
-    ch_abricate_summary_results = Channel.empty()
     ch_amrfinderplus_results  = params.run_amrfinderplus ? AMRFINDERPLUS_RUN.out.report : Channel.empty()
-    //ch_amrfinderplus_summary_results = Channel.empty()
     ch_rgi_results            = params.run_rgi ? RGI_MAIN.out.tsv : Channel.empty()
-    ch_rgi_summary_results =  Channel.empty()
     ch_resfinder_results = params.run_resfinder ? RESFINDER_RUN.out.txt : Channel.empty()
-    //ch_resfinder_summary_results = Channel.empty()
-    ch_plasmidfinder_results = params.run_plasmidfinder ? PLASMIDFINDER_RUN.out.tsv : Channel.empty()
     ch_plasclass_results      = params.run_plasclass ? PLASCLASS.out.report : Channel.empty()
    
 
 
-    
-    if (params.run_hamronization) {
+     // Count the number of active AMR tools
+    def active_amr_tools = [params.run_abricate, params.run_amrfinderplus, params.run_rgi].count { it }
+    // Run HAMRONIZATION only if more than one AMR tool is active and run_hamronization is true
+    if (params.run_hamronization && active_amr_tools > 1) {
         HAMRONIZATION (
             ch_abricate_results,
             ch_amrfinderplus_results,
@@ -384,9 +379,8 @@ workflow METAAMR {
         ch_versions = ch_versions.mix(HAMRONIZATION.out.versions.ifEmpty([]))
         ch_multiqc_files = ch_multiqc_files.mix(HAMRONIZATION.out.summary.collect{it[1]}.ifEmpty([]))
     } else {
-        log.info "Skipping HAMRONIZATION: run_hamronization is set to false."
+        log.info "Skipping HAMRONIZATION: Either fewer than two AMR tools are active or run_hamronization is set to false."
     }
-   
     
     
     if (params.run_profiling) {
@@ -433,24 +427,27 @@ workflow METAAMR {
     )
 
     ch_filtered_ids = FILTER_READS_BY_SPECIES.out.filtered_read_ids
-    ch_species_summary = FILTER_READS_BY_SPECIES.out.species_summary
 
-    // STEP 2: Extract reads from input FASTQ based on filtered IDs
+    // STEP 1.5: Check if species is present
+    ch_species_summary_raw = FILTER_READS_BY_SPECIES.out.species_summary
+    ch_species_summary = ch_species_summary_raw.filter { meta, file ->
+        !file.text.contains("Absent")
+    }
+
+    // STEP 2: Extract reads only if species was present
     EXTRACT_FILTERED_READS(
         ch_filtered_ids.join(ch_hostremoved)
     )
 
-    // STEP 3: Combine filtered FASTQ with species summary and ResFinder DB
+    // STEP 3: Join extracted reads + species summary + ResFinder DB
     ch_filtered_reads = EXTRACT_FILTERED_READS.out.filtered_reads
     ch_resfinder_input = ch_filtered_reads
         .join(ch_species_summary)
         .combine(PREPARE_TOOL_DBS.out.resfinder_db)
 
-    // STEP 4: Run ResFinder and map AMR genes to species
+    // STEP 4: Run ResFinder
     RESFINDER_WITH_SPECIES(ch_resfinder_input)
 }
-
-
 
 
 
@@ -469,37 +466,7 @@ workflow METAAMR {
         ch_resfinder_summary_results = Channel.empty()
     }
 
-    /*
-
-    if (params.run_summar && params.run_amrfinderplus) {
-        AMRFINDERPLUS_POSTPROCESS(HAMRONIZATION.out.amrfinderplus)
-        ch_amrfinderplus_summary_results = AMRFINDERPLUS_POSTPROCESS.out
-    }
-*/
-
-    if (params.run_summar && params.run_amrfinderplus) {
-        AMRFINDERPLUS_POSTPROCESS(HAMRONIZATION.out.amrfinderplus)
-        ch_amrfinderplus_summary_results = AMRFINDERPLUS_POSTPROCESS.out.summary.map { meta, summary_file ->
-            // The file is already named correctly: ${meta.id}_amrfinderplus_summary.tsv
-            def sample_id = meta.id.toLowerCase().trim()
-            tuple(sample_id, summary_file.parent)
-        }
-    } else {
-        ch_amrfinderplus_summary_results = Channel.empty()
-    }
-     
-    if (params.run_summar && params.run_rgi) {
-        RGI_POSTPROCESS(HAMRONIZATION.out.rgi)
-        ch_rgi_summary_results = RGI_POSTPROCESS.out
-    }
-
-    if (params.run_summar && params.run_abricate) {
-        ABRICATE_POSTPROCESS(HAMRONIZATION.out.abricate)
-        ch_abricate_summary_results = ABRICATE_POSTPROCESS.out
-    }
-
- 
-
+    
 
 
      
@@ -523,20 +490,13 @@ workflow METAAMR {
         tuple(sample_id, targetFile.parent)
     } : Channel.empty()
 
-// DEBUG: View channel contents before joining
-    ch_centrifuge_summary_results.view { " Centrifuge summary: $it" }
-    ch_resfinder_summary_results.view { " ResFinder summary: $it" }
-    ch_amrfinderplus_summary_results.view { "AMRFinderPlus summary: $it" }
-    ch_plasmidfinder_summary_results.view { "PlasmidFinder summary: $it" }
-
 // Join both channels by sample_id and run MERGE
 if (params.run_summar) {
     ch_merge_inputs = ch_centrifuge_summary_results
         .join(ch_resfinder_summary_results)
-        .join(ch_amrfinderplus_summary_results)
         .join(ch_plasmidfinder_summary_results)
-        .map { sample_id, cent_dir, res_dir , amr_dir ,plas_dir -> 
-            tuple(sample_id, cent_dir, res_dir,amr_dir , plas_dir)
+        .map { sample_id, cent_dir, res_dir , plas_dir -> 
+            tuple(sample_id, cent_dir, res_dir, plas_dir)
         }
 
     ch_merge_inputs.view { "Merge input: $it" }

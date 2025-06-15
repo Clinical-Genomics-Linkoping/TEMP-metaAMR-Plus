@@ -20,7 +20,6 @@ def main():
     # Tool directories (add more as needed)
     parser.add_argument('--centrifuge_dir', required=False)
     parser.add_argument('--resfinder_dir', required=False)
-    parser.add_argument('--amrfinderplus_dir', required=False)
     parser.add_argument('--plasmidfinder_dir', required=False)
 
     args = parser.parse_args()
@@ -41,15 +40,8 @@ def main():
         if resfinder is not None:
             merged_tables.append(resfinder)
 
-    # Tool: AMRFinderPlus 
-    if args.amrfinderplus_dir:
-        amrfinderplus_file = os.path.join(args.amrfinderplus_dir, f"{sample}_amrfinderplus_summary.tsv")
-        amrfinderplus = load_table(amrfinderplus_file)
-        if amrfinderplus is not None:
-            merged_tables.append(amrfinderplus)        
-
    
-    # Tool: PlasmidFinder  # NEW
+    # Tool: PlasmidFinder 
     if args.plasmidfinder_dir:
         plasmidfinder_file = os.path.join(args.plasmidfinder_dir, f"{sample}_plasmidfinder.tsv")
         plasmidfinder = load_table(plasmidfinder_file)

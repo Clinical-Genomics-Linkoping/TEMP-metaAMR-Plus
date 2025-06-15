@@ -25,15 +25,18 @@ def main():
 
     if not cleaned_lines:
         print("[resfinder] No valid rows found.", file=sys.stderr)
-        pd.DataFrame(columns=["Contig", "Gene_Symbol", "Identity", "Phenotype", "Accession"]).to_csv(args.output, sep='\t', index=False)
+        pd.DataFrame(columns=["Contig", "Gene_Symbol", "Identity", "Phenotype", "Accession", "Position_contig"]).to_csv(args.output, sep='\t', index=False)
         return
 
     # Parse into DataFrame
     df = pd.DataFrame([x.split('\t') for x in cleaned_lines])
     df.columns = ["Gene_Symbol", "Identity", "Alignment", "Coverage", "Position_ref", "Contig", "Position_contig", "Phenotype", "Accession"]
 
+    # Clean the 'Contig' field
+    df["Contig"] = df["Contig"].str.split().str[0]  # Keep only the first word before any space
+
     # Keep only the relevant summary columns
-    df_out = df[["Contig", "Gene_Symbol", "Identity", "Phenotype", "Accession"]]
+    df_out = df[["Contig", "Gene_Symbol", "Identity", "Phenotype", "Accession", "Position_contig"]]
 
     # Save
     df_out.to_csv(args.output, sep='\t', index=False)

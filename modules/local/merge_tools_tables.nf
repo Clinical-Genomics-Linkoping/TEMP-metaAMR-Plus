@@ -8,7 +8,7 @@ process MERGE_TOOL_TABLES {
         'quay.io/biocontainers/pandas:1.4.3' }"
 
     input:
-    tuple val(sample_id), path(centrifuge_dir), path(resfinder_dir) , path(amrfinderplus_dir) , path(plasmidfinder_dir)
+    tuple val(sample_id), path(centrifuge_dir), path(resfinder_dir) , path(plasmidfinder_dir)
 
     output:
     path "${sample_id}_merged_summary.tsv", emit: merged
@@ -20,7 +20,6 @@ process MERGE_TOOL_TABLES {
         --sample ${sample_id} \\
         --centrifuge_dir ${centrifuge_dir} \\
         --resfinder_dir ${resfinder_dir} \\
-        --amrfinderplus_dir ${amrfinderplus_dir} \\
         --plasmidfinder_dir ${plasmidfinder_dir} \\
         --output ${sample_id}_merged_summary.tsv
 
