@@ -12,7 +12,7 @@ workflow META_ASSEMBLY {
     def mode = "--nano-hq" 
     
 
-    // Run Flye with --meta option for metagenomic assembly
+    // meta option for metagenomic assembly
     ch_assembly = FLYE_META(
         reads,
         mode,
@@ -20,7 +20,7 @@ workflow META_ASSEMBLY {
 
     ch_versions = ch_versions.mix(FLYE_META.out.versions)
    
-    // Run MetaQUAST for assembly quality evaluation
+    // for assembly quality evaluation
     QUAST(ch_assembly)
     ch_versions = ch_versions.mix(QUAST.out.versions)
 

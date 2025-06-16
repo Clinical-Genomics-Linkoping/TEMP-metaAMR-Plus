@@ -27,7 +27,7 @@ workflow PREPARE_TOOL_DBS {
     ch_amrfinderplus_db = prepare_db('amrfinderplus', params.amrfinderplus_db, params.download_amrfinderplus_db)
     ch_plasmidfinder_db = prepare_db('plasmidfinder', params.plasmidfinder_db, params.download_plasmidfinder_db)
 
-    // Debug: Print tool names for each channel
+    // Debug
     ch_resfinder_db.view { "ResFinder tool: $it" }
     ch_rgi_db.view { "RGI tool: $it" }
     ch_amrfinderplus_db.view { "AMRFinderPlus tool: $it" }
@@ -35,18 +35,17 @@ workflow PREPARE_TOOL_DBS {
 
     
     
-    // Process ResFinder DB with indexing
+    
     ch_resfinder_db_downloaded = ch_resfinder_db.branch {
         to_download: it == 'resfinder'
         ready: true
     }
     ch_resfinder_db_downloaded.to_download | RESFINDER_DB_DOWNLOAD
 
-    // Automatically run indexing after database download
+    // indexing after database download
     ch_indexed_resfinder_db = RESFINDER_INDEX(RESFINDER_DB_DOWNLOAD.out.db)
         .map { db_files -> file(db_files[0]).parent }
 
-    // Ensure ResFinder gets the indexed DB
     ch_resfinder_db_final = ch_resfinder_db_downloaded.ready.mix(ch_indexed_resfinder_db).first()
 
 
@@ -76,7 +75,7 @@ workflow PREPARE_TOOL_DBS {
     ch_plasmidfinder_db_downloaded.to_download | PLASMIDFINDER_DB_DOWNLOAD
     ch_plasmidfinder_db_final = ch_plasmidfinder_db_downloaded.ready.mix(PLASMIDFINDER_DB_DOWNLOAD.out.db).first()
 
-    // Debug: Print final paths for all databases
+    // Debug
     ch_resfinder_db_final.view { "Final ResFinder DB Path: $it" }
     ch_rgi_db_final.view { "Final RGI DB Path: $it" }
     ch_amrfinderplus_db_final.view { "Final AMRFinderPlus DB Path: $it" }

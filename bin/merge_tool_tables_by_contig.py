@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--output', required=True)
     
 
-    # Tool directories (add more as needed)
+    
     parser.add_argument('--centrifuge_dir', required=False)
     parser.add_argument('--resfinder_dir', required=False)
     parser.add_argument('--plasmidfinder_dir', required=False)
@@ -26,14 +26,14 @@ def main():
     sample = args.sample
     merged_tables = []
 
-    # Tool: Centrifuge
+    #  Centrifuge
     if args.centrifuge_dir:
         centrifuge_file = os.path.join(args.centrifuge_dir, f"{sample}_contigs_species.tsv")
         centrifuge = load_table(centrifuge_file, rename={"Contig_ID": "Contig"})
         if centrifuge is not None:
             merged_tables.append(centrifuge)
 
-    # Tool: ResFinder
+    #  ResFinder
     if args.resfinder_dir:
         resfinder_file = os.path.join(args.resfinder_dir, f"{sample}_resfinder_summary.tsv")
         resfinder = load_table(resfinder_file)
@@ -41,7 +41,7 @@ def main():
             merged_tables.append(resfinder)
 
    
-    # Tool: PlasmidFinder 
+    # PlasmidFinder 
     if args.plasmidfinder_dir:
         plasmidfinder_file = os.path.join(args.plasmidfinder_dir, f"{sample}_plasmidfinder.tsv")
         plasmidfinder = load_table(plasmidfinder_file)

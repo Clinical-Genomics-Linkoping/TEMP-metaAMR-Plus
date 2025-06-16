@@ -9,13 +9,13 @@ def parse_centrifuge_results(results_file):
     contig_classifications = defaultdict(list)
     with open(results_file, 'r') as f:
         reader = csv.reader(f, delimiter='\t')
-        next(reader)  # Skip header
+        next(reader)  
         for row in reader:
             contig_id, seq_id, tax_id, score, query_length = row[0], row[1], row[2], row[3], row[6]
             try:
                 score = float(score)
             except ValueError:
-                score = 0  # Default to 0 if score can't be converted to float
+                score = 0  
             contig_classifications[contig_id].append((tax_id, score, query_length))
     return contig_classifications
 
@@ -23,7 +23,7 @@ def parse_centrifuge_report(report_file):
     tax_info = {}
     with open(report_file, 'r') as f:
         reader = csv.reader(f, delimiter='\t')
-        next(reader)  # Skip header
+        next(reader)  
         for row in reader:
             name, tax_id, tax_rank, genome_size, num_reads, num_unique_reads, abundance = row
             tax_info[tax_id] = {

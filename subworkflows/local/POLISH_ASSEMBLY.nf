@@ -4,7 +4,7 @@ include { RACON as RACON_1 } from '../../modules/nf-core/racon/main'
 
 workflow POLISH_ASSEMBLY {
     take:
-    ch_input    // channel: [ [ meta ], [ reads ], [ assembly ] ]
+    ch_input    
 
     main:
     ch_versions = Channel.empty()
@@ -44,7 +44,7 @@ workflow POLISH_ASSEMBLY {
             [meta, reads instanceof List ? reads[0] : reads, assembly, paf]
         }
 
-    // First (and final) Racon polishing
+    // Racon polishing
     RACON_1(ch_racon_input_1, 1)
     ch_versions = ch_versions.mix(RACON_1.out.versions)
 

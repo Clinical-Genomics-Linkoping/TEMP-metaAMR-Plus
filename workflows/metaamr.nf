@@ -107,7 +107,7 @@ include { MERGE_TOOL_TABLES} from '../modules/local/merge_tools_tables'
 workflow METAAMR {
 
     take:
-    ch_samplesheet // channel: samplesheet read in from --input
+    ch_samplesheet 
     
 
     main:
@@ -143,23 +143,23 @@ workflow METAAMR {
     //
     
     if (params.perform_trim) {
-    PORECHOP_PORECHOP(
-        ch_samplesheet
-    )
-    ch_clipped_reads = PORECHOP_PORECHOP.out.reads
-        .map { meta, reads -> 
-            def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
-            [ meta + [single_end: true], porechopped_reads ] }
+        PORECHOP_PORECHOP(
+            ch_samplesheet
+        )
+        ch_clipped_reads = PORECHOP_PORECHOP.out.reads
+            .map { meta, reads -> 
+                def porechopped_reads = reads.findAll { it.name.contains('porechopped') } 
+                [ meta + [single_end: true], porechopped_reads ] }
     
-    ch_processed_reads = FILTLONG ( ch_clipped_reads.map { meta, reads -> [ meta, [], reads ] } ).reads
+        ch_processed_reads = FILTLONG ( ch_clipped_reads.map { meta, reads -> [ meta, [], reads ] } ).reads
 
-    ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
-    ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
-    ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
-    ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
-} else {
-    ch_processed_reads = ch_samplesheet
-}
+        ch_versions = ch_versions.mix(PORECHOP_PORECHOP.out.versions.first())
+        ch_versions = ch_versions.mix(FILTLONG.out.versions.first())
+        ch_multiqc_files = ch_multiqc_files.mix( PORECHOP_PORECHOP.out.log.map{ it[1] } )
+        ch_multiqc_files = ch_multiqc_files.mix( FILTLONG.out.log.map{ it[1] } )
+    } else {
+        ch_processed_reads = ch_samplesheet
+    }
     
     /*
         SUBWORKFLOW: HOST REMOVAL
@@ -167,8 +167,8 @@ workflow METAAMR {
     if ( params.perform_hostremoval ) {
         ch_hostremoved = READS_HOSTREMOVAL(
             ch_processed_reads, 
-            ch_reference,   // Reference channel passed here
-            ch_reference_index             // Hostremoval index passed here
+            ch_reference,   
+            ch_reference_index         
         ).reads
         ch_versions = ch_versions.mix(READS_HOSTREMOVAL.out.versions)
     } else {
@@ -180,7 +180,7 @@ workflow METAAMR {
     */
     
     if ( params.perform_assembly) {
-        ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly   // Use Flye’s metagenomic assembly mode
+        ch_assembly = META_ASSEMBLY(ch_hostremoved).ch_assembly   
         ch_versions = ch_versions.mix(META_ASSEMBLY.out.ch_versions)
     } else {
         ch_assembly = ch_hostremoved
@@ -198,14 +198,14 @@ workflow METAAMR {
         ch_final_polished_assembly = ch_assembly
     }
 
-    // Prepare assemblies for downstream tools
+    //  assemblies for downstream tools
     ch_assembly_for_arg = ch_final_polished_assembly.mix(ch_hostremoved)
         .groupTuple()
         .map { meta, assemblies -> [meta, assemblies.find { it != null } ?: meta.reads] }
 
 
     if (params.run_resfinder) {
-    log.info "Running ResFinder"
+        log.info "Running ResFinder"
 
     // Use polished assembly if available, otherwise fallback
     ch_resfinder_input = params.perform_polish_assembly ? ch_final_polished_assembly
@@ -231,12 +231,12 @@ workflow METAAMR {
         }
 
     // Run ResFinder
-    RESFINDER_RUN(ch_resfinder_input)
+        RESFINDER_RUN(ch_resfinder_input)
 
     // Capture versions & outputs
-    ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
-    ch_resfinder = RESFINDER_RUN.out.all_outputs
-}
+        ch_versions = ch_versions.mix(RESFINDER_RUN.out.versions.first())
+        ch_resfinder = RESFINDER_RUN.out.all_outputs
+    }
     
     if (params.run_abricate) {
       
@@ -304,7 +304,7 @@ workflow METAAMR {
         )
     }    
     
-    // Determine if FASTA validation is needed
+    //  if FASTA validation is needed
     def run_validate_fasta = params.run_plasmidfinder || params.run_plasclass
 
     // Run FASTA validation only if PlasmidFinder or PlasClass is enabled
@@ -321,16 +321,14 @@ workflow METAAMR {
     if (params.run_plasmidfinder) {
         log.info "Running PlasmidFinder"
 
-    // Combine validated assemblies (or raw assemblies if validation is skipped) with PlasmidFinder database
+    // Combine validated assemblies with PlasmidFinder database
         ch_plasmidfinder_input = ch_validated_assemblies.combine(PREPARE_TOOL_DBS.out.plasmidfinder_db)
 
     // Run PlasmidFinder
         PLASMIDFINDER_RUN(ch_validated_assemblies, PREPARE_TOOL_DBS.out.plasmidfinder_db)
 
-    // Collect versions
         ch_versions = ch_versions.mix(PLASMIDFINDER_RUN.out.versions)
 
-    // Add PlasmidFinder results to MultiQC if required
         ch_multiqc_files = ch_multiqc_files.mix(
             PLASMIDFINDER_RUN.out.tsv.collect { it[1] }.ifEmpty([])
         )
@@ -341,17 +339,13 @@ workflow METAAMR {
     if (params.run_plasclass) {
         log.info "Running PlasClass"
 
-    // Step 1: Run PlasClass
         PLASCLASS(ch_validated_assemblies)
 
-    // Step 2: Post-process PlasClass outputs
         PLASCLASS_POSTPROCESS(PLASCLASS.out.report)
 
-    // Combine versions for tracking
         ch_versions = ch_versions.mix(PLASCLASS.out.versions)
         ch_versions = ch_versions.mix(PLASCLASS_POSTPROCESS.out.versions)
 
-    // Step 3: Collect results for MultiQC (optional)
         ch_multiqc_files = ch_multiqc_files.mix(
             PLASCLASS_POSTPROCESS.out.classified.collect { it[1] }.ifEmpty([])
         )
@@ -385,11 +379,11 @@ workflow METAAMR {
     
     if (params.run_profiling) {
     ch_profiling_input = ch_final_polished_assembly.map { meta, assembly -> 
-        [meta, [assembly]]  //  pass assembly as a list, set fasta to null
+        [meta, [assembly]]  //  
       
     }
     ch_profiling_input.view { "Profiling input: $it" }
-    // Ensure databases_ch is created correctly
+    
     databases_ch = Channel.fromPath(params.databases)
         .splitCsv(header: true, sep: ',')
         .map { row ->
@@ -400,7 +394,7 @@ workflow METAAMR {
             [db_meta, file(row.db_path)]
         }
 
-    // Calling the PROFILING subworkflow 
+   
     PROFILING(
         ch_profiling_input,
         databases_ch
@@ -408,7 +402,7 @@ workflow METAAMR {
 
     ch_versions = ch_versions.mix(PROFILING.out.versions)
     ch_multiqc_files = ch_multiqc_files.mix(PROFILING.out.raw_profiles.collect { it[1] }.ifEmpty([]))
-    // COMBINE_CONTIGS_AND_SPECIES module call
+
     COMBINE_CONTIGS_AND_SPECIES(
         PROFILING.out.centrifuge_results.join(PROFILING.out.centrifuge_report)
     )
@@ -420,7 +414,7 @@ workflow METAAMR {
 
 
     if (params.target_species) {
-    // STEP 1: Run species filter
+    // Run species filter
     FILTER_READS_BY_SPECIES(
         PROFILING.out.centrifuge_report.join(PROFILING.out.centrifuge_results),
         params.target_species
@@ -428,24 +422,24 @@ workflow METAAMR {
 
     ch_filtered_ids = FILTER_READS_BY_SPECIES.out.filtered_read_ids
 
-    // STEP 1.5: Check if species is present
+    // Check if species is present
     ch_species_summary_raw = FILTER_READS_BY_SPECIES.out.species_summary
     ch_species_summary = ch_species_summary_raw.filter { meta, file ->
         !file.text.contains("Absent")
     }
 
-    // STEP 2: Extract reads only if species was present
+    // Extract reads only if species was present
     EXTRACT_FILTERED_READS(
         ch_filtered_ids.join(ch_hostremoved)
     )
 
-    // STEP 3: Join extracted reads + species summary + ResFinder DB
+    //  Join extracted reads + species summary + ResFinder DB
     ch_filtered_reads = EXTRACT_FILTERED_READS.out.filtered_reads
     ch_resfinder_input = ch_filtered_reads
         .join(ch_species_summary)
         .combine(PREPARE_TOOL_DBS.out.resfinder_db)
 
-    // STEP 4: Run ResFinder
+    // Run ResFinder
     RESFINDER_WITH_SPECIES(ch_resfinder_input)
 }
 
@@ -458,7 +452,7 @@ workflow METAAMR {
     
     // Extract sample_id + dir from ResFinder POSTPROCESSED summary
         ch_resfinder_summary_results = RESFINDER_POSTPROCESS.out.summary.map { meta, summary_file ->
-        // The file is already named correctly: ${meta.id}_resfinder_summary.tsv
+        // The file is named correctly: ${meta.id}_resfinder_summary.tsv
             def sample_id = meta.id.toLowerCase().trim()
             tuple(sample_id, summary_file.parent)
         }
@@ -470,7 +464,7 @@ workflow METAAMR {
 
 
      
-    // Extract sample_id + dir from PlasmidFinder results (outside the main conditional)
+    // Extract sample_id + dir from PlasmidFinder results 
     ch_plasmidfinder_results = params.run_plasmidfinder ? PLASMIDFINDER_RUN.out.tsv : Channel.empty()
     ch_plasmidfinder_summary_results = params.run_plasmidfinder ? 
         ch_plasmidfinder_results.map { meta, tsv_file ->
@@ -491,27 +485,21 @@ workflow METAAMR {
     } : Channel.empty()
 
 // Join both channels by sample_id and run MERGE
-if (params.run_summar) {
-    ch_merge_inputs = ch_centrifuge_summary_results
-        .join(ch_resfinder_summary_results)
-        .join(ch_plasmidfinder_summary_results)
-        .map { sample_id, cent_dir, res_dir , plas_dir -> 
-            tuple(sample_id, cent_dir, res_dir, plas_dir)
-        }
+    if (params.run_summar) {
+        ch_merge_inputs = ch_centrifuge_summary_results
+            .join(ch_resfinder_summary_results)
+            .join(ch_plasmidfinder_summary_results)
+            .map { sample_id, cent_dir, res_dir , plas_dir -> 
+                tuple(sample_id, cent_dir, res_dir, plas_dir)
+            }
 
-    ch_merge_inputs.view { "Merge input: $it" }
+        ch_merge_inputs.view { "Merge input: $it" }
 
-    MERGE_TOOL_TABLES(ch_merge_inputs)
-}
-
-
+        MERGE_TOOL_TABLES(ch_merge_inputs)
+    }
 
 
 
-
-
-
-    
     // Collate and save software versions
     //
     softwareVersionsToYAML(ch_versions)
@@ -523,7 +511,7 @@ if (params.run_summar) {
         ).set { ch_collated_versions }
     
     
-  //
+    //
     // MODULE: MultiQC
     //
     ch_multiqc_config        = Channel.fromPath(
@@ -568,8 +556,8 @@ if (params.run_summar) {
         []
     )
 
-    emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    versions       = ch_versions.ifEmpty(null)               // channel: [ path(versions.yml) ]
+    emit:multiqc_report = MULTIQC.out.report.toList() 
+    versions       = ch_versions.ifEmpty(null)               
 
 }
 

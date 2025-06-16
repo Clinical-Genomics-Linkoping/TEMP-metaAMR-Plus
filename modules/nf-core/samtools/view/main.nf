@@ -7,7 +7,7 @@ process SAMTOOLS_VIEW {
         'https://depot.galaxyproject.org/singularity/samtools:1.21--h50ea8bc_0' :
         'biocontainers/samtools:1.21--h50ea8bc_0' }"
 
-    //publishDir "${params.outdir}/${task.process.replaceAll(":","_")}", mode: 'copy', overwrite: true
+    
     publishDir "${params.outdir}/analysis_ready_fastqs", mode: 'copy', overwrite: true
     input:
     tuple val(meta), path(input), path(index)

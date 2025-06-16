@@ -33,7 +33,7 @@ def extract_reads(results_file, taxid_list, taxid_to_name, output_file, summary_
     species_read_counts = defaultdict(int)
 
     if not taxid_list:
-        # Write dummy empty output and summary
+        
         print("No matching taxIDs found — creating empty output.", file=sys.stderr)
         with open(output_file, 'w') as out:
             pass

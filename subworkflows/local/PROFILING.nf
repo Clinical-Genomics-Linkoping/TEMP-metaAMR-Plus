@@ -22,7 +22,7 @@ workflow PROFILING {
         [meta, input_reads]
     }
 
-    // Run Kaiju
+    //  Kaiju
     if (params.run_kaiju) {
         ch_kaiju_db = databases_ch.filter { it[0].tool == 'kaiju' }.map { it[1] }
         ch_kaiju_input = ch_profiling_input.combine(ch_kaiju_db)
@@ -54,7 +54,7 @@ workflow PROFILING {
     ch_centrifuge_report  = Channel.empty()
     ch_centrifuge_results = Channel.empty()
 
-    // Run Centrifuge
+    //  Centrifuge
 if (params.run_centrifuge) {
     ch_centrifuge_db = databases_ch.filter { it[0].tool == 'centrifuge' }.map { it[1] }
     ch_centrifuge_input = ch_profiling_input.combine(ch_centrifuge_db)
@@ -85,7 +85,7 @@ if (params.run_centrifuge) {
     ch_krona_html = ch_krona_html.mix(KRONA_CENTRIFUGE.out.html)
 }
    
-    // Emit Outputs
+    
     emit:
     raw_classifications = ch_raw_classifications
     raw_profiles = ch_raw_profiles

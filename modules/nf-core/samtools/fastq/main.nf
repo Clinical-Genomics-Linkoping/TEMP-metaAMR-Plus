@@ -8,7 +8,6 @@ process SAMTOOLS_FASTQ {
         'biocontainers/samtools:1.21--h50ea8bc_0' }"
 
     input:
-    //tuple val(meta), path(input)
     tuple val(meta), path(input)
     val(interleave)
     

@@ -21,7 +21,7 @@ process RESFINDER_RUN {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}"
 
-    // Ensure correct input handling: Decompress assembly if needed
+    // Ensure correct input handling: Decompress assembly 
     def decompressed_assembly = assembly.toString().endsWith('.gz') ? "decompressed_${meta.id}.fasta" : assembly
     def decompress_cmd = assembly.toString().endsWith('.gz') ? "gunzip -c ${assembly} > ${decompressed_assembly}" : ""
 

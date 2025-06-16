@@ -11,11 +11,7 @@ process ABRICATE_RUN {
     input:
     tuple val(meta), path(assembly)
     val db_name
-    /*
-    output:
-    tuple val(meta), path("${meta.id}_abricate.tsv"), emit: report
-    path "versions.yml"           , emit: versions
-*/
+    
 
     output:
     tuple val(meta), path("${meta.id}_abricate.tsv"), emit: report

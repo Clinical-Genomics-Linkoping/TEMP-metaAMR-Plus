@@ -40,6 +40,20 @@
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
+                },
+                "bacteria_report_outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "The output directory where bacteria reports will be saved.",
+                    "default": "results_full_run/bacteria_reports",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "summary_outdir": {
+                    "type": "string", 
+                    "format": "directory-path",
+                    "description": "The output directory where summary reports will be saved.",
+                    "default": "results_full_run/summary",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },
@@ -285,6 +299,13 @@
             "fa_icon": "fas fa-tools",
             "description": "Options for executing various analysis tools",
             "properties": {
+                "run_fastqc": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run FastQC quality control on input reads",
+                    "fa_icon": "fas fa-check"
+                },
+            
                 "run_resfinder": {
                     "type": "boolean",
                     "default": true,
@@ -428,7 +449,21 @@
                     "type": "string",
                     "default": "unknown",
                     "description": "Version of CARD database"
+                },
+                "run_summar": {
+                   "type": "boolean",
+                   "default": false,
+                   "description": "Run summary analysis",
+                   "fa_icon": "fas fa-chart-bar"
+                },
+
+                "target_species": {
+                   "type": ["string", "null"],
+                   "default": null,
+                   "description": "Target species for analysis",
+                   "fa_icon": "fas fa-dna"
                 }
+
             }
         },
         "institutional_config_options": {

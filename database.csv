@@ -1,3 +1,3 @@
 tool,db_name,db_params,db_path
-kaiju,kaiju_db,,/mnt/reference/Reference_Genomes/Kaiju-nr-euk-db
-centrifuge,centrifuge_db,,/mnt/reference/Reference_Genomes/centrifuge_database
+kaiju,kaiju_db,,/path-to-db/Kaiju-nr-euk-db
+centrifuge,centrifuge_db,,/path-to-db/centrifuge_database
