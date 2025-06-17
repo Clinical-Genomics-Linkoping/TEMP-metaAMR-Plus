@@ -19,6 +19,8 @@
 
 <h1>Meta-AMR-Plus</h1>
 
+[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.15682600-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.15682600)
+
 ## Introduction
 
 **Meta-AMR-Plus** is a NextFlow pipeline designed for analyzing long-read Nanopore metagenomic data. It detects antimicrobial resistance (AMR) genes, identifies plasmids, and performs taxonomic classification using multiple tools and reference databases. The pipeline processes sequencing data efficiently and generates standardized output tables, making it easier to compare results across different tools and datasets.
