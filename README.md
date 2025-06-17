@@ -127,8 +127,8 @@ For more details about the output files and reports, please refer to the
 **Meta-AMR-Plus** was originally written by Leila Nasirzadeh.
 
 We thank the following people for their contributions to the development of this pipeline: \
-  - [Jyotirmoy Das](@JD2112) \
-  - [Debojyoti Das](@BioDebojyoti)
+  - [Jyotirmoy Das](https://github.com/JD2112) \
+  - [Debojyoti Das](https://github.com/BioDebojyoti)
 <!-- TODO nf-core: If applicable, make list of people who have also contributed -->
 
 ## Contributions and Support
