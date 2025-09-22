@@ -51,6 +51,24 @@
 11. Generates visualizations for Centrifuge and Kaiju results using `Krona`.
 12. Presents quality control and summary statistics for preprocessing, assembly, taxonomic classification, host-read removal, and AMR detection using ResFinder, AMRFinderPlus, CARD-RGI, and Abricate (`MultiQC`).
 
+## ⚠️ Warning
+>  **Known limitations of the current release:**
+
+-  The pipeline is only compatible with **older versions of Nextflow**, before `v25.04.7`.  
+  Running with newer versions may cause errors.
+
+-  You must use the `--download_*` flags for the pipeline to work correctly with AMR detection tools and PlasmidFinder:
+  - `--download_resfinder_db`
+  - `--download_rgi_db`
+  - `--download_amrfinderplus_db`
+  - `--download_plasmidfinder_db`
+  
+  Using pre-supplied or manually downloaded databases for these tools **is not supported** in this version.
+
+-  The `--run_summar` flag may break due to inconsistent output filenames between tools.  
+
+>  These issues will be resolved in a future release.
+
 
 ## Usage
 
